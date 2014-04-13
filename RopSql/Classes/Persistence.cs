@@ -281,202 +281,202 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-        private string parseEntity(object entidade, Type tipoEntidade, int acao, object entidadeFiltro, List<int> filtrosChavePrimaria, bool obterExclusao, string[] atributosExibir, out Dictionary<object, object> parametrosComando)
+        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, out Dictionary<object, object> commandParameters)
         {
-            string instrucaoSQL = string.Empty;
-            Dictionary<object, object> dadosSQLFiltro;
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> sqlFilterData;
 
-            parametrosComando = null;
+            commandParameters = null;
 
-            Dictionary<object, object> dadosSQLEntidade = obterListaAnotacoesValores(Convert.ChangeType(entidade, tipoEntidade), tipoEntidade, acao, filtrosChavePrimaria, out parametrosComando);
+            Dictionary<object, object> sqlEntityData = getAnnotationValueList(Convert.ChangeType(entity, entityType), entityType, action, primaryKeyFilters, out commandParameters);
 
-            if (entidadeFiltro != null)
-                dadosSQLFiltro = obterListaAnotacoesValores(Convert.ChangeType(entidadeFiltro, tipoEntidade), tipoEntidade, acao, filtrosChavePrimaria, out parametrosComando);
+            if (filterEntity != null)
+                sqlFilterData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, action, primaryKeyFilters, out commandParameters);
             else
-                dadosSQLFiltro = null;
+                sqlFilterData = null;
 
-            var colunaChave = obterColunaChave(entidade, false).GetCustomAttributes(true)
-                                                               .FirstOrDefault(cln => cln is ColunaDados 
-                                                                                   && ((IColunaDados)cln).EhChavePrimaria()) as ColunaDados;
-            string nomeColunaChave = string.Empty;
-            if (colunaChave != null)
-                nomeColunaChave = colunaChave.NomeColuna;
+            var keyColumn = getKeyColumn(entity, false).GetCustomAttributes(true)
+                                                       .FirstOrDefault(cln => cln is DataColumn 
+                                                                           && ((IDataColumn)cln).IsPrimaryKey()) as DataColumn;
+            string keyColumnName = string.Empty;
+            if (keyColumn != null)
+                keyColumnName = keyColumn.ColumnName;
 
-            var hashEntidade = tipoEntidade.GetCustomAttributes(true)
-                                           .FirstOrDefault(cln => cln is AssinaturaHash) as AssinaturaHash;
-            var codigoHash = hashEntidade != null ? hashEntidade.CodigoHash : 0;
+            var entityHash = entityType.GetCustomAttributes(true)
+                                       .FirstOrDefault(cln => cln is HashSignature) as HashSignature;
+            var hashCode = entityHash != null ? entityHash.HashCode : 0;
 
-            Dictionary<string, string> parametrosSQL = obterParametrosSQL(dadosSQLEntidade, acao, dadosSQLFiltro, atributosExibir, nomeColunaChave, codigoHash, (filtrosChavePrimaria != null), obterExclusao);
+            Dictionary<string, string> sqlParameters = obterParametrosSQL(sqlEntityData, action, sqlFilterData, showAttributes, keyColumnName, hashCode, (primaryKeyFilters != null), getExclusion);
 
-            switch (acao)
+            switch(action)
             {
-                case (int)AcaoPersistencia.Inclusao:
+                case (int)PersistenceAction.Create:
 
-                    instrucaoSQL = String.Format(RepositorioSQL.PersistenciaDados_Acao_Inserir,
-                                                 parametrosSQL["Tabela"].ToLower(),
-                                                 parametrosSQL["listaCampos"],
-                                                 parametrosSQL["listaValores"]);
-
-                    break;
-
-                case (int)AcaoPersistencia.Alteracao:
-
-                    instrucaoSQL = String.Format(RepositorioSQL.PersistenciaDados_Acao_Alterar,
-                                                 parametrosSQL["Tabela"].ToLower(),
-                                                 parametrosSQL["listaCamposComValores"],
-                                                 parametrosSQL["listaCamposFiltro"]);
+                    sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Create,
+                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["columnList"],
+                                                   sqlParameters["valueList"]);
 
                     break;
 
-                case (int)AcaoPersistencia.Exclusao:
+                case (int)PersistenceAction.Edit:
 
-                    instrucaoSQL = String.Format(RepositorioSQL.PersistenciaDados_Acao_Excluir,
-                                                 parametrosSQL["Tabela"].ToLower(),
-                                                 parametrosSQL["listaCamposFiltro"]);
+                    sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Edit,
+                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["columnValueList"],
+                                                   sqlParameters["filterColumnList"]);
+
+                    break;
+
+                case (int)PersistenceAction.Delete:
+
+                    sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Delete,
+                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["filterColumnList"]);
 
                     break;
                 default: // Listagem ou Consulta
 
-                    instrucaoSQL = String.Format(RepositorioSQL.PersistenciaDados_Acao_Consultar,
-                                                 "{0}",
-                                                 parametrosSQL["listaCampos"],
-                                                 parametrosSQL["Tabela"].ToLower(),
-                                                 parametrosSQL["listaRelacionamentos"],
-                                                 parametrosSQL["listaCamposFiltro"],
-                                                 "{1}", "{2}", string.Empty);
+                    sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Query,
+                                                   "{0}",
+                                                   sqlParameters["columnList"],
+                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["relationList"],
+                                                   sqlParameters["filterColumnList"],
+                                                   "{1}", "{2}", string.Empty);
 
                     break;
             }
 
-            return instrucaoSQL;
+            return sqlInstruction;
         }
 
-        private List<string> traduzirComposicao(object entidade, Type tipoEntidade, int acao, object entidadeFiltro)
+        private List<string> parseComposition(object entity, Type entityType, int action, object filterEntity)
         {
-            List<string> resultado = new List<string>();
-            object instanciaEntidadeFilho = null;
-            Dictionary<object, object> parametrosComando;
+            List<string> result = new List<string>();
+            object childEntityInstance = null;
+            Dictionary<object, object> commandParameters;
 
-            IEnumerable<PropertyInfo> entidadesFilho = tipoEntidade.GetProperties().Where(prp => prp.GetCustomAttributes(true)
-                                                                   .Any(an => an.GetType().Name.Equals("EntidadeRelacionada")));
+            IEnumerable<PropertyInfo> childEntities = entityType.GetProperties().Where(prp => prp.GetCustomAttributes(true)
+                                                                                .Any(an => an.GetType().Name.Equals("RelatedEntity")));
 
-            foreach (PropertyInfo entidadeFilho in entidadesFilho)
+            foreach (PropertyInfo child in childEntities)
             {
-                instanciaEntidadeFilho = entidadeFilho.GetValue(entidade, null);
-                object entidadeFilhoFiltro = null;
+                childEntityInstance = child.GetValue(entity, null);
+                object childEntityFilter = null;
 
-                var entidadePai = (acao != (int)AcaoPersistencia.Alteracao) ? entidade : entidadeFiltro;
+                var entityParent = (action != (int)PersistenceAction.Edit) ? entity : filterEntity;
 
-                if (instanciaEntidadeFilho != null)
+                if (childEntityInstance != null)
                 {
-                    if (!instanciaEntidadeFilho.GetType().Name.Contains("List"))
+                    if (!childEntityInstance.GetType().Name.Contains("List"))
                     {
-                        acao = definirAcaoPersistencia(instanciaEntidadeFilho, obterColunaChave(entidadeFilho, false));
-                        entidadeFilhoFiltro = Activator.CreateInstance(instanciaEntidadeFilho.GetType());
+                        action = setPersistenceAction(childEntityInstance, getKeyColumn(filterEntity, false));
+                        childEntityFilter = Activator.CreateInstance(childEntityInstance.GetType());
 
-                        if (acao == (int)AcaoPersistencia.Alteracao)
-                            migrarChavePrimariaEntidade(instanciaEntidadeFilho, entidadeFilhoFiltro);
+                        if (action == (int)PersistenceAction.Edit)
+                            migrateEntityPrimaryKey(childEntityInstance, childEntityFilter);
 
-                        definirChaveHashEntidade(entidadePai, entidadeFilho);
+                        setEntityHashKey(entityParent, child);
 
-                        resultado.Add(traduzirEntidade(instanciaEntidadeFilho, instanciaEntidadeFilho.GetType(), acao, entidadeFilhoFiltro, null, false, null, out parametrosComando));
+                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
                     }
                     else
                     {
-                        var instanciaListaFilho = (IList)instanciaEntidadeFilho;
-                        List<object> listaFiltrosFilho = new List<object>();
+                        var childListInstance = (IList)childEntityInstance;
+                        List<object> childFiltersList = new List<object>();
 
-                        foreach (var itemListaFilho in instanciaListaFilho)
+                        foreach (var listItem in childListInstance)
                         {
-                            acao = definirAcaoPersistencia(itemListaFilho, obterColunaChave(itemListaFilho, false));
-                            entidadeFilhoFiltro = Activator.CreateInstance(itemListaFilho.GetType());
+                            action = setPersistenceAction(listItem, getKeyColumn(listItem, false));
+                            childEntityFilter = Activator.CreateInstance(listItem.GetType());
 
-                            if (acao == (int)AcaoPersistencia.Alteracao)
+                            if (action == (int)PersistenceAction.Edit)
                             {
-                                migrarChavePrimariaEntidade(itemListaFilho, entidadeFilhoFiltro);
-                                listaFiltrosFilho.Add(entidadeFilhoFiltro);
+                                migrateEntityPrimaryKey(listItem, childEntityFilter);
+                                childFiltersList.Add(childEntityFilter);
                             }
 
-                            definirChaveHashEntidade(entidadePai, itemListaFilho);
+                            setEntityHashKey(entityParent, listItem);
 
-                            resultado.Add(traduzirEntidade(itemListaFilho, itemListaFilho.GetType(), acao, entidadeFilhoFiltro, null, false, null, out parametrosComando));
+                            result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
                         }
 
-                        if (listaFiltrosFilho.Count > 0)
-                            resultado.Add(obterComposicaoExcluir(entidadeFiltro, listaFiltrosFilho));
+                        if (childFiltersList.Count > 0)
+                            result.Add(getExclusionComposition(filterEntity, childFiltersList));
                     }
                 }
             }
 
-            if (resultado.Any(rst => rst.Contains(RepositorioSQL.PersistenciaDados_PalavraReservada_Insercao)))
-                resultado.Reverse();
+            if (result.Any(rst => rst.Contains(SQLANSIRepository.DataPersistence_ReservedWord_INSERT)))
+                result.Reverse();
 
-            return resultado;
+            return result;
         }
 
-        private string obterComposicaoExcluir(object entidade, IList composicaoExistente)
+        private string getExclusionComposition(object entity, IList existentComposition)
         {
-            List<int> chavesExistentes = new List<int>();
-            AdaptadorDados filtroComposicao = null;
+            List<int> existentKeys = new List<int>();
+            DataAdapter compositionFilter = null;
 
-            if (composicaoExistente.Count > 0)
+            if (existentComposition.Count > 0)
             {
-                filtroComposicao = Activator.CreateInstance(composicaoExistente[0].GetType()) as AdaptadorDados;
-                definirChaveHashEntidade(entidade, filtroComposicao);
+                compositionFilter = Activator.CreateInstance(existentComposition[0].GetType()) as DataAdapter;
+                setEntityHashKey(entity, compositionFilter);
             }
 
-            foreach (var composicao in composicaoExistente)
+            foreach (var composit in existentComposition)
             {
-                var colunaChaveComposicao = obterColunaChave(composicao, false);
-                chavesExistentes.Add(int.Parse(colunaChaveComposicao.GetValue(composicao, null).ToString()));
+                var compositKeyColumn = getKeyColumn(composit, false);
+                existentKeys.Add(int.Parse(compositKeyColumn.GetValue(composit, null).ToString()));
             }
 
-            Dictionary<object, object> parametrosComando;
+            Dictionary<object, object> commandParameters;
             
-            string resultado = string.Empty;
-            if (filtroComposicao != null)
-                resultado = traduzirEntidade(filtroComposicao, filtroComposicao.GetType(), (int)AcaoPersistencia.Exclusao, filtroComposicao, chavesExistentes, true, null, out parametrosComando);
+            string result = string.Empty;
+            if (compositionFilter != null)
+                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, out commandParameters);
 
-            return resultado;
+            return result;
         }
 
-        private bool definirChaveHashEntidade(object entidadePai, object entidadeFilho)
+        private bool setEntityHashKey(object parentEntity, object childEntity)
         {
-            bool resultado = false;
-            AssinaturaHash anotacaoHashPai = null;
+            bool result = false;
+            HashSignature parentHashAnnotation = null;
 
-            var colunaChaveEntidade = obterColunaChave(entidadePai, false);
+            var entityKeyColumn = getKeyColumn(parentEntity, false);
 
-            if (colunaChaveEntidade != null)
+            if (entityKeyColumn != null)
             {
-                var identReferencia = obterColunaChave(entidadeFilho, true);
+                var referenceId = getKeyColumn(childEntity, true);
 
-                if (identReferencia != null)
+                if (referenceId != null)
                 {
-                    identReferencia.SetValue(entidadeFilho, colunaChaveEntidade.GetValue(entidadePai, null), null);
-                    resultado = true;
+                    referenceId.SetValue(childEntity, entityKeyColumn.GetValue(parentEntity, null), null);
+                    result = true;
                 }
                 else
-                    resultado = false;
+                    result = false;
             }
 
-            var colunaHashEntidade = entidadeFilho.GetType().GetProperties()
-                                                  .FirstOrDefault(fd => fd.Name.Equals("HashTipoReferencia"));
+            var entityHashColumn = childEntity.GetType().GetProperties()
+                                                        .FirstOrDefault(fd => fd.Name.Equals("ReferenceTypeHash"));
 
-            if (colunaHashEntidade != null)
+            if (entityHashColumn != null)
             {
-                anotacaoHashPai = entidadePai.GetType().GetCustomAttributes(true)
-                                         .FirstOrDefault(ca => ca.GetType().Name
-                                         .Equals("AssinaturaHash")) as AssinaturaHash;
+                parentHashAnnotation = parentEntity.GetType().GetCustomAttributes(true)
+                                                   .FirstOrDefault(ca => ca.GetType().Name
+                                                   .Equals("HashSignature")) as HashSignature;
 
-                if (anotacaoHashPai != null)
+                if (parentHashAnnotation != null)
                 {
-                    colunaHashEntidade.SetValue(entidadeFilho, anotacaoHashPai.CodigoHash, null);
-                    resultado = resultado && true;
+                    entityHashColumn.SetValue(childEntity, parentHashAnnotation.HashCode, null);
+                    result = result && true;
                 }
             }
 
-            return resultado;
+            return result;
         }
 
         private bool replicarHashFilhos(object entidadeCarregada, object instanciaAtributo)
@@ -519,15 +519,15 @@ namespace System.Data.RopSql
             return resultado;
         }
 
-        private void migrarChavePrimariaEntidade(object entidade, object entidadeFiltro)
+        private void migrateEntityPrimaryKey(object entity, object filterEntity)
         {
-            var colunaChaveEntidade = getKeyColumn(entidade, false);
+            var entityKeyColumn = getKeyColumn(entity, false);
 
-            if (colunaChaveEntidade != null)
+            if (entityKeyColumn != null)
             {
-                var valorChave = colunaChaveEntidade.GetValue(entidade, null);
-                colunaChaveEntidade.SetValue(entidadeFiltro, valorChave, null);
-                colunaChaveEntidade.SetValue(entidade, 0, null);
+                var valorChave = entityKeyColumn.GetValue(entity, null);
+                entityKeyColumn.SetValue(filterEntity, valorChave, null);
+                entityKeyColumn.SetValue(entity, 0, null);
             }
         }
 
