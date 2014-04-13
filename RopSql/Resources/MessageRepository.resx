@@ -1,0 +1,255 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="RopSql_AttributeNotListable_BR" xml:space="preserve">
+    <value>Um dos atributos informados para exibição não foram definidos como listáveis.</value>
+  </data>
+  <data name="RopSql_AttributeNotListable_DE" xml:space="preserve">
+    <value>Eines der attribute display informiert nicht börsenfähig definiert.</value>
+  </data>
+  <data name="RopSql_AttributeNotListable_ES" xml:space="preserve">
+    <value>Uno de los atributos para mostrar no informó define como listaveis.</value>
+  </data>
+  <data name="RopSql_AttributeNotListable_FR" xml:space="preserve">
+    <value>L'un des attributs à afficher informé pas défini comme listables.</value>
+  </data>
+  <data name="RopSql_AttributeNotListable_US" xml:space="preserve">
+    <value>One of the attributes to display informed not defined as listable.</value>
+  </data>
+  <data name="RopSql_ClosedDatabaseConnection_BR" xml:space="preserve">
+    <value>A conexão ao banco de dados encontra-se fechada, é necessário conectar.</value>
+  </data>
+  <data name="RopSql_ClosedDatabaseConnection_DE" xml:space="preserve">
+    <value>Die Verbindung zur Datenbank geschlossen wird, müssen Sie die Verbindung.</value>
+  </data>
+  <data name="RopSql_ClosedDatabaseConnection_ES" xml:space="preserve">
+    <value>La conexión a la base de datos está cerrada, debe conectar.</value>
+  </data>
+  <data name="RopSql_ClosedDatabaseConnection_FR" xml:space="preserve">
+    <value>La connexion à la base de données est fermée, vous devez vous connecter.</value>
+  </data>
+  <data name="RopSql_ClosedDatabaseConnection_US" xml:space="preserve">
+    <value>The connection to the database is closed, you must connect.</value>
+  </data>
+  <data name="RopSql_ConnectionConfigurationNotFound_BR" xml:space="preserve">
+    <value>Configuração para conexão ao banco de dados não encontrada.</value>
+  </data>
+  <data name="RopSql_ConnectionConfigurationNotFound_DE" xml:space="preserve">
+    <value>Einstellen zur Verbindung mit der Datenbank nicht gefunden.</value>
+  </data>
+  <data name="RopSql_ConnectionConfigurationNotFound_ES" xml:space="preserve">
+    <value>Configuración para la conexión a la base de datos no se ha encontrado.</value>
+  </data>
+  <data name="RopSql_ConnectionConfigurationNotFound_FR" xml:space="preserve">
+    <value>Configuration pour la connexion à la base de données introuvable.</value>
+  </data>
+  <data name="RopSql_ConnectionConfigurationNotFound_US" xml:space="preserve">
+    <value>Setting to the database connection not found.</value>
+  </data>
+  <data name="RopSql_DataSourceNotFound_BR" xml:space="preserve">
+    <value>Caminho do repositório de dados não encontrado.</value>
+  </data>
+  <data name="RopSql_DataSourceNotFound_DE" xml:space="preserve">
+    <value>Daten-Repository nicht gefunden.</value>
+  </data>
+  <data name="RopSql_DataSourceNotFound_ES" xml:space="preserve">
+    <value>La ruta de datos repositorio no se encuentra.</value>
+  </data>
+  <data name="RopSql_DataSourceNotFound_FR" xml:space="preserve">
+    <value>Chemin du référentiel de données introuvable.</value>
+  </data>
+  <data name="RopSql_DataSourceNotFound_US" xml:space="preserve">
+    <value>Data repository path not found.</value>
+  </data>
+  <data name="RopSql_InvalidAttribute_BR" xml:space="preserve">
+    <value>Um ou mais dos campos obrigatórios não foram preenchidos ou são inválidos.</value>
+  </data>
+  <data name="RopSql_InvalidAttribute_DE" xml:space="preserve">
+    <value>Einer oder mehrere der erforderlichen Felder wurden nicht ausgefüllt oder ungültig sind.</value>
+  </data>
+  <data name="RopSql_InvalidAttribute_ES" xml:space="preserve">
+    <value>Uno o más de los campos requeridos no fueron llenados o no son válidos.</value>
+  </data>
+  <data name="RopSql_InvalidAttribute_FR" xml:space="preserve">
+    <value>Un ou plusieurs des champs obligatoires n'ont pas été remplis ou ne sont pas valides.</value>
+  </data>
+  <data name="RopSql_InvalidAttribute_US" xml:space="preserve">
+    <value>One or more of mandatory fields not were filled or are invalid.</value>
+  </data>
+  <data name="RopSql_InvalidConnectionCredentials_BR" xml:space="preserve">
+    <value>As credenciais informadas para conexão ao banco de dados são inválidas.</value>
+  </data>
+  <data name="RopSql_InvalidConnectionCredentials_DE" xml:space="preserve">
+    <value>Informierte Anmeldeinformationen für die Verbindung mit der Datenbank sind ungültig.</value>
+  </data>
+  <data name="RopSql_InvalidConnectionCredentials_ES" xml:space="preserve">
+    <value>Informados credenciales para conectarse a la base de datos no son válidos.</value>
+  </data>
+  <data name="RopSql_InvalidConnectionCredentials_FR" xml:space="preserve">
+    <value>Pouvoirs éclairées pour la connexion à la base de données ne sont pas valides.</value>
+  </data>
+  <data name="RopSql_InvalidConnectionCredentials_US" xml:space="preserve">
+    <value>Informed credentials for connecting to the database are invalid.</value>
+  </data>
+  <data name="RopSql_InvalidPersistenceAction_BR" xml:space="preserve">
+    <value>Ação de persistência inválida.</value>
+  </data>
+  <data name="RopSql_InvalidPersistenceAction_DE" xml:space="preserve">
+    <value>Persistenz aktion ungültig.</value>
+  </data>
+  <data name="RopSql_InvalidPersistenceAction_ES" xml:space="preserve">
+    <value>Acción de persistencia no válido.</value>
+  </data>
+  <data name="RopSql_InvalidPersistenceAction_FR" xml:space="preserve">
+    <value>Persistance action invalide.</value>
+  </data>
+  <data name="RopSql_InvalidPersistenceAction_US" xml:space="preserve">
+    <value>Invalid persistence action.</value>
+  </data>
+  <data name="RopSql_RecordNotFound_BR" xml:space="preserve">
+    <value>Nenhum registro foi encontrado com o critério de pesquisa informado.</value>
+  </data>
+  <data name="RopSql_RecordNotFound_DE" xml:space="preserve">
+    <value>Keine Datensätze gefunden wurden für die Suchkriterien eingegeben.</value>
+  </data>
+  <data name="RopSql_RecordNotFound_ES" xml:space="preserve">
+    <value>No se encontraron registros para los criterios de búsqueda introducidos.</value>
+  </data>
+  <data name="RopSql_RecordNotFound_FR" xml:space="preserve">
+    <value>Aucun enregistrement n'a été trouvé pour les critères de recherche saisis.</value>
+  </data>
+  <data name="RopSql_RecordNotFound_US" xml:space="preserve">
+    <value>No records were found for the search criteria entered.</value>
+  </data>
+  <data name="RopSql_SQLInstructionNotFound_BR" xml:space="preserve">
+    <value>Instrução SQL não informada.</value>
+  </data>
+  <data name="RopSql_SQLInstructionNotFound_DE" xml:space="preserve">
+    <value>Unknown SQL-Anweisung.</value>
+  </data>
+  <data name="RopSql_SQLInstructionNotFound_ES" xml:space="preserve">
+    <value>Desconocido sentencia SQL.</value>
+  </data>
+  <data name="RopSql_SQLInstructionNotFound_FR" xml:space="preserve">
+    <value>Unknown instruction SQL.</value>
+  </data>
+  <data name="RopSql_SQLInstructionNotFound_US" xml:space="preserve">
+    <value>Unknown SQL statement.</value>
+  </data>
+</root>
