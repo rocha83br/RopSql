@@ -128,7 +128,7 @@ namespace System.Data.RopSql
             return executionReturn;
         }
 
-        protected XmlDocument executeSearch(string sqlInstruction)
+        protected XmlDocument executeQuery(string sqlInstruction)
         {
             SqlCommand sqlCommand = null;
             SqlDataAdapter sqlAdapter = null;

@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Configuration;
 using System.Data.RopSql;
 using System.Data.RopSql.Interfaces;
+using System.Data.RopSql.Resources;
+using System.Data.RopSql.DataAnnotations;
 
 namespace System.Data.RopSql
 {
@@ -100,177 +102,177 @@ namespace System.Data.RopSql
             return recordsAffected;
 		}
 
-        public int Excluir(object entidadeFiltro, Type tipoEntidade)
+        public int Delete(object filterEntity, Type entityType)
         {
-            string instrucaoSQL = string.Empty;
-            Dictionary<object, object> parametrosComando;
-            int registrosAfetados = 0;
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> commandParameters;
+            int recordAffected = 0;
 
-            if (_manterConexao || base.conectar())
+            if (keepConnection || base.connect())
             {
-                instrucaoSQL = traduzirEntidade(Convert.ChangeType(entidadeFiltro, tipoEntidade),
-                                                tipoEntidade,
-                                                (int)AcaoPersistencia.Exclusao,
-                                                Convert.ChangeType(entidadeFiltro, tipoEntidade),
-                                                null, false, _arrayVazio,
-                                                out parametrosComando);
+                sqlInstruction = parseEntity(Convert.ChangeType(filterEntity, entityType),
+                                             entityType,
+                                             (int)PersistenceAction.Delete,
+                                             Convert.ChangeType(filterEntity, entityType),
+                                             null, false, emptyArray,
+                                             out commandParameters);
 
-                registrosAfetados = executarComando(instrucaoSQL, parametrosComando);
+                recordAffected = executeCommand(sqlInstruction, commandParameters);
             }
 
-            if (!_manterConexao) base.desconectar();
+            if (!keepConnection) base.disconnect();
 
-            return registrosAfetados;
+            return recordAffected;
 		}
 
-        public object Consultar(object entidadeFiltro, Type tipoEntidade, List<int> filtrosChavePrimaria, bool cargaComposicao)
+        public object View(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
         {
-            object entidadeRetorno = null;
+            object returnEntity = null;
             
-            var listaConsulta = Listar(entidadeFiltro, tipoEntidade, filtrosChavePrimaria, 0, 
+            var queryList = List(filterEntity, entityType, primaryKeyFilters, 0, 
                                        string.Empty, string.Empty, string.Empty, 
-                                       false, false, false, true, cargaComposicao);
+                                       false, false, false, true, loadComposition);
 
-            if (listaConsulta.Count > 0) entidadeRetorno = listaConsulta[0];
+            if (queryList.Count > 0) returnEntity = queryList[0];
             
-            return entidadeRetorno;
+            return returnEntity;
 		}
 
-        public IList Listar(object entidadeFiltro, Type tipoEntidade, List<int> filtrosChavePrimaria, int limiteRegistros, string atributosExibir, string atributosAgrupar, string atributosOrdenar, bool apenasAtributosListaveis, bool obterExclusao, bool ordenacaoDecrescente, bool consultaIndividual, bool cargaComposicao)
+        public IList List(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
         {
-            string instrucaoSQL = string.Empty;
-            string[] atributosExibicao = new string[0];
-            string[] atributosAgrupamento = new string[0];
-            string[] atributosOrdenacao = new string[0];
-            Dictionary<object, object> relacaoAtributosCampos = null;
-            Dictionary<object, object> parametrosComando;
-            string listaCampos = string.Empty;
-            int acaoPersistencia = consultaIndividual ? (int)AcaoPersistencia.Consulta 
-                                                      : (int)AcaoPersistencia.Listagem;
+            string sqlInstruction = string.Empty;
+            string[] displayAttributes = new string[0];
+            string[] groupingAttributes = new string[0];
+            string[] ordinationAttributes = new string[0];
+            Dictionary<object, object> attributeColumnRelation = null;
+            Dictionary<object, object> commandParameters;
+            string columnList = string.Empty;
+            int persistenceAction = uniqueQuery ? (int)PersistenceAction.View 
+                                                : (int)PersistenceAction.List;
 
-            Type tipoDinamicoLista = typeof(List<>).MakeGenericType(new Type[] { tipoEntidade });
-            object listaRetorno = Activator.CreateInstance(tipoDinamicoLista, true);
+            Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
+            object returnList = Activator.CreateInstance(dynamicListType, true);
 
-            if (apenasAtributosListaveis)
-                validarAtributosListaveis(tipoEntidade, atributosExibir, out atributosExibicao);
+            if (onlyListableAttributes)
+                validateListableAttributes(entityType, showAttributes, out displayAttributes);
 
             // Montando instrução de consulta
             
-            instrucaoSQL = traduzirEntidade(Convert.ChangeType(entidadeFiltro, tipoEntidade), 
-                                            tipoEntidade,
-                                           acaoPersistencia, 
-                                           Convert.ChangeType(entidadeFiltro, tipoEntidade), 
-                                           filtrosChavePrimaria, obterExclusao, atributosExibicao,
-                                           out parametrosComando);
+            sqlInstruction = parseEntity(Convert.ChangeType(filterEntity, entityType), 
+                                         entityType,
+                                         persistenceAction, 
+                                         Convert.ChangeType(filterEntity, entityType), 
+                                         primaryKeyFilters, getExclusion, displayAttributes,
+                                         out commandParameters);
 
-            instrucaoSQL = string.Format(instrucaoSQL, limiteRegistros > 0 ? string.Format(RepositorioSQL.PersistenciaDados_Acao_Limitar, limiteRegistros) : string.Empty, "{0}", "{1}");
+            sqlInstruction = string.Format(sqlInstruction, recordLimit > 0 ? string.Format(SQLANSIRepository.DataPersistence_Action_LimitResult_MySQL, recordLimit) : string.Empty, "{0}", "{1}");
 
-            if (!string.IsNullOrEmpty(atributosAgrupar))
+            if (!string.IsNullOrEmpty(groupAttributes))
             {
-                string listaCamposComplementar = string.Empty;
+                string complementaryColumnList = string.Empty;
 
-                atributosAgrupamento = atributosAgrupar.Split(',');
+                groupingAttributes = groupAttributes.Split(',');
 
-                for (int vC = 0; vC < atributosAgrupamento.Length; vC++)
-                    atributosAgrupamento[vC] = atributosAgrupamento[vC].Trim();
+                for (int cont = 0; cont < groupingAttributes.Length; cont++)
+                    groupingAttributes[cont] = groupingAttributes[cont].Trim();
 
-                relacaoAtributosCampos = obterListaAnotacoesValores(Convert.ChangeType(entidadeFiltro, tipoEntidade), tipoEntidade, acaoPersistencia, null, out parametrosComando);
+                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, persistenceAction, null, out commandParameters);
 
-                foreach (var relacao in relacaoAtributosCampos)
-                    if (Array.IndexOf(atributosAgrupamento, relacao.Key) > -1)
-                        listaCampos += string.Format("{0}, ", ((KeyValuePair<string, object>)relacao.Value).Key);
+                foreach (var rel in attributeColumnRelation)
+                    if (Array.IndexOf(groupingAttributes, rel.Key) > -1)
+                        columnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
                     else
-                        if ((!relacao.Key.Equals("Classe")) && (!relacao.Key.Equals("Tabela")))
-                            listaCamposComplementar += string.Format("{0}, ", ((KeyValuePair<string, object>)relacao.Value).Key);
+                        if ((!rel.Key.Equals("Class")) && (!rel.Key.Equals("DataTable")))
+                            complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
 
-                if (!String.IsNullOrEmpty(listaCampos) && Convert.ToInt32(listaCampos) > 2)
-                    listaCampos = listaCampos.Substring(0, listaCampos.Length - 2);
-                if (!String.IsNullOrEmpty(listaCamposComplementar) && Convert.ToInt32(listaCamposComplementar) > 2)
-                    listaCamposComplementar = listaCamposComplementar.Substring(0, listaCamposComplementar.Length - 2);
+                if (!String.IsNullOrEmpty(columnList) && Convert.ToInt32(columnList) > 2)
+                    columnList = columnList.Substring(0, columnList.Length - 2);
+                if (!String.IsNullOrEmpty(complementaryColumnList) && Convert.ToInt32(complementaryColumnList) > 2)
+                    complementaryColumnList = complementaryColumnList.Substring(0, complementaryColumnList.Length - 2);
 
-                instrucaoSQL = string.Format(instrucaoSQL,
-                                             string.Format(RepositorioSQL.PersistenciaDados_Acao_Agrupar,
-                                                          listaCampos + ", " + listaCamposComplementar),
-                                                          "{0}");
+                sqlInstruction = string.Format(sqlInstruction,
+                                              string.Format(SQLANSIRepository.DataPersistence_Action_Group,
+                                                            columnList, ", ", complementaryColumnList),
+                                                            "{0}");
             }
             else
-                instrucaoSQL = string.Format(instrucaoSQL, string.Empty, "{0}");
+                sqlInstruction = string.Format(sqlInstruction, string.Empty, "{0}");
 
-            if (!string.IsNullOrEmpty(atributosOrdenar))
+            if (!string.IsNullOrEmpty(orderAttributes))
             {
-                atributosOrdenacao = atributosOrdenar.Split(',');
-                relacaoAtributosCampos = obterListaAnotacoesValores(Convert.ChangeType(entidadeFiltro, tipoEntidade), tipoEntidade, acaoPersistencia, null, out parametrosComando);
+                ordinationAttributes = orderAttributes.Split(',');
+                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, persistenceAction, null, out commandParameters);
 
-                for (int contAtrib = 0; contAtrib < atributosOrdenacao.Length; contAtrib++)
+                for (int contAtrib = 0; contAtrib < ordinationAttributes.Length; contAtrib++)
                 {
-                    atributosOrdenacao[contAtrib] = atributosOrdenacao[contAtrib].Trim();
+                    ordinationAttributes[contAtrib] = ordinationAttributes[contAtrib].Trim();
 
-                    var atributoOrdenar = relacaoAtributosCampos.FirstOrDefault(rca => atributosOrdenacao[contAtrib].Equals(rca.Key));
-                    var colunaOrdenar = ((KeyValuePair<object, object>)atributoOrdenar.Value).Key;
+                    var attribToOrder = attributeColumnRelation.FirstOrDefault(rca => ordinationAttributes[contAtrib].Equals(rca.Key));
+                    var columnToOrder = ((KeyValuePair<object, object>)attribToOrder.Value).Key;
                     
-                    if (!(colunaOrdenar is ColunaRelacional))
-                        listaCampos = string.Concat(listaCampos, colunaOrdenar, ", ");
+                    if (!(columnToOrder is RelationalColumn))
+                        columnList = string.Concat(columnList, columnToOrder, ", ");
                     else
-                        listaCampos = string.Concat(listaCampos, string.Format("{0}.{1}", ((ColunaRelacional)colunaOrdenar).NomeTabela.ToLower(),
-                                                                                           ((ColunaRelacional)colunaOrdenar).NomeColuna), ", ");
+                        columnList = string.Concat(columnList, string.Format("{0}.{1}", ((RelationalColumn)columnToOrder).TableName.ToLower(),
+                                                                                        ((RelationalColumn)columnToOrder).ColumnName), ", ");
                 }
 
-                listaCampos = listaCampos.Substring(0, listaCampos.Length - 2);
+                columnList = columnList.Substring(0, columnList.Length - 2);
 
-                instrucaoSQL = string.Format(instrucaoSQL,
-                                             string.Format(RepositorioSQL.PersistenciaDados_Acao_Ordenar,
-                                                          listaCampos,
-                                                          ordenacaoDecrescente ? "DESC" : "ASC"));
+                sqlInstruction = string.Format(sqlInstruction,
+                                               string.Format(SQLANSIRepository.DataPersistence_Action_OrderResult,
+                                                             columnList,
+                                                             orderDescending ? "DESC" : "ASC"));
             }
             else
-                instrucaoSQL = string.Format(instrucaoSQL, string.Empty, "{0}");
+                sqlInstruction = string.Format(sqlInstruction, string.Empty, "{0}");
 
-            if (_manterConexao || base.conectar())
+            if (keepConnection || base.connect())
             {
                 // Tratando retorno do banco
 
-                XmlDocument retornoPesquisa = efetuarPesquisa_SQL(instrucaoSQL);
+                XmlDocument queryReturn = base.executeQuery(sqlInstruction);
 
-                listaRetorno = traduzirRetornoBancoDados(retornoPesquisa, entidadeFiltro.GetType());
+                returnList = parseDatabaseReturn(queryReturn, filterEntity.GetType());
             }
 
-            if(!_manterConexao) base.desconectar();
+            if(!keepConnection) base.disconnect();
 
-            // Efetuando carga da composição quando existente (Lazy Loading)
+            // Efetuando carga da composição quando existente (Eager Loading)
 
-            if (cargaComposicao && (((IList)listaRetorno).Count > 0))
-                for (int inC = 0; inC < ((IList)listaRetorno).Count; inC++)
-                    carregarComposicao(((IList)listaRetorno)[inC], ((IList)listaRetorno)[inC].GetType());
+            if (loadComposition && (((IList)returnList).Count > 0))
+                for (int inC = 0; inC < ((IList)returnList).Count; inC++)
+                    fillComposition(((IList)returnList)[inC], ((IList)returnList)[inC].GetType());
 
-            return (IList)listaRetorno;
+            return (IList)returnList;
 		}
 
-        public void DefinirFiltroPesquisa(object entidade, string filtro)
+        public void SetSearchFilter(object entity, string filter)
         {
-            DateTime valorDataHora;
-            int valorNumerico;
-            long valorNumericoLongo;
+            DateTime datetimeValue;
+            int numericValue;
+            long longNumericValue;
 
-            if (!string.IsNullOrEmpty(filtro))
+            if (!string.IsNullOrEmpty(filter))
             {
-                var atributosFiltraveis = entidade.GetType().GetProperties()
-                                                            .Where(atb => atb.GetCustomAttributes(true)
-                                                            .Any(ca => (ca is IColunaDados)
-                                                                    && ((IColunaDados)ca).EhFiltravel()));
+                var filterableAttributes = entity.GetType().GetProperties()
+                                                           .Where(atb => atb.GetCustomAttributes(true)
+                                                           .Any(ca => (ca is IDataColumn)
+                                                                   && ((IDataColumn)ca).IsFilterable()));
 
-                foreach (PropertyInfo atributo in atributosFiltraveis)
+                foreach (PropertyInfo attrib in filterableAttributes)
                 {
-                    if (atributo.PropertyType.Name.Equals("DateTime")
-                        && DateTime.TryParse(filtro, out valorDataHora))
-                        atributo.SetValue(entidade, valorDataHora, null);
-                    else if (atributo.PropertyType.Name.Equals("Int32")
-                        && int.TryParse(filtro, out valorNumerico))
-                        atributo.SetValue(entidade, valorNumerico, null);
-                    else if (atributo.PropertyType.Name.Equals("Int64")
-                        && long.TryParse(filtro, out valorNumericoLongo))
-                        atributo.SetValue(entidade, valorNumericoLongo, null);
-                    else if (atributo.PropertyType.Name.Equals("String"))
-                        atributo.SetValue(entidade, filtro, null);
+                    if (attrib.PropertyType.Name.Equals("DateTime")
+                        && DateTime.TryParse(filter, out datetimeValue))
+                        attrib.SetValue(entity, datetimeValue, null);
+                    else if (attrib.PropertyType.Name.Equals("Int32")
+                        && int.TryParse(filter, out numericValue))
+                        attrib.SetValue(entity, numericValue, null);
+                    else if (attrib.PropertyType.Name.Equals("Int64")
+                        && long.TryParse(filter, out longNumericValue))
+                        attrib.SetValue(entity, longNumericValue, null);
+                    else if (attrib.PropertyType.Name.Equals("String"))
+                        attrib.SetValue(entity, filter, null);
                 }
             }
         }
@@ -519,7 +521,7 @@ namespace System.Data.RopSql
 
         private void migrarChavePrimariaEntidade(object entidade, object entidadeFiltro)
         {
-            var colunaChaveEntidade = obterColunaChave(entidade, false);
+            var colunaChaveEntidade = getKeyColumn(entidade, false);
 
             if (colunaChaveEntidade != null)
             {
@@ -529,13 +531,13 @@ namespace System.Data.RopSql
             }
         }
 
-        private int definirAcaoPersistencia(object entidade, PropertyInfo colunaChaveEntidade)
+        private int setPersistenceAction(object entity, PropertyInfo entityKeyColumn)
         {
-            return (colunaChaveEntidade.GetValue(entidade, null).ToString().Equals(ValoresPadraoCamposSql.Zerado))
-                    ? (int)AcaoPersistencia.Inclusao : (int)AcaoPersistencia.Alteracao;
+            return (entityKeyColumn.GetValue(entity, null).ToString().Equals(ValoresPadraoCamposSql.Zerado))
+                    ? (int)PersistenceAction.Create : (int)PersistenceAction.Edit;
         }
 
-        private IList traduzirRetornoBancoDados(XmlDocument retornoBancoDados, Type tipoEntidade)
+        private IList parseDatabaseReturn(XmlDocument retornoBancoDados, Type tipoEntidade)
         {
             Type tipoDinamicoLista = typeof(List<>).MakeGenericType(new Type[] { tipoEntidade });
             object listaRetorno = Activator.CreateInstance(tipoDinamicoLista, true);
@@ -570,7 +572,7 @@ namespace System.Data.RopSql
             return (IList)listaRetorno;
         }
 
-        private Dictionary<object, object> obterListaAnotacoesValores(object entidade, Type tipoEntidade, int acao, List<int> filtrosChavePrimaria, out Dictionary<object, object> parametrosComando)
+        private Dictionary<object, object> getAnnotationValueList(object entidade, Type tipoEntidade, int acao, List<int> filtrosChavePrimaria, out Dictionary<object, object> parametrosComando)
         {
             var associacaoDadosObjetoSQL = new Dictionary<object, object>();
             parametrosComando = new Dictionary<object, object>();
@@ -864,7 +866,7 @@ namespace System.Data.RopSql
             return dicionarioRetorno;
         }
 
-        public void carregarComposicao(object entidadeCarregada, Type tipoEntidade)
+        public void fillComposition(object entidadeCarregada, Type tipoEntidade)
         {
             EntidadeRelacionada configRelacao = null;
             object instanciaAtributo = null;
@@ -1009,7 +1011,7 @@ namespace System.Data.RopSql
             return retorno;
         }
 
-        private void validarAtributosListaveis(Type tipoEntidade, string atributosExibir, out string[] atributosExibicao)
+        private void validateListableAttributes(Type tipoEntidade, string atributosExibir, out string[] atributosExibicao)
         {
             IEnumerable<PropertyInfo> atributosListaveis = null;
             bool atributoNaoListavel = false;
