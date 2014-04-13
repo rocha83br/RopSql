@@ -9,6 +9,7 @@ using System.Data.RopSql;
 using System.Data.RopSql.Interfaces;
 using System.Data.RopSql.Resources;
 using System.Data.RopSql.DataAnnotations;
+using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
@@ -296,8 +297,8 @@ namespace System.Data.RopSql
                 sqlFilterData = null;
 
             var keyColumn = getKeyColumn(entity, false).GetCustomAttributes(true)
-                                                       .FirstOrDefault(cln => cln is DataColumn 
-                                                                           && ((IDataColumn)cln).IsPrimaryKey()) as DataColumn;
+                                                       .FirstOrDefault(cln => cln is DataAnnotations.DataColumn 
+                                                                           && ((IDataColumn)cln).IsPrimaryKey()) as DataAnnotations.DataColumn;
             string keyColumnName = string.Empty;
             if (keyColumn != null)
                 keyColumnName = keyColumn.ColumnName;
@@ -479,44 +480,44 @@ namespace System.Data.RopSql
             return result;
         }
 
-        private bool replicarHashFilhos(object entidadeCarregada, object instanciaAtributo)
+        private bool replicateChildHashes(object loadedEntity, object attributeInstance)
         {
-            bool resultado = false;
-            List<int> identidadesAtributosGenericos = null;
+            bool result = false;
+            List<int> genericAttributesId = null;
 
-            var atributoGenericoFiltro = instanciaAtributo.GetType()
+            var genericAttributeFilter = attributeInstance.GetType()
                                                           .GetProperties()
                                                           .FirstOrDefault(atb => atb.PropertyType
-                                                          .GetInterface("IHashTipoReferencia") != null);
+                                                          .GetInterface("IReferenceTypeHash") != null);
 
-            if (atributoGenericoFiltro != null)
+            if (genericAttributeFilter != null)
             {
-                var instanciaAtributoGenerico = Activator.CreateInstance(atributoGenericoFiltro.PropertyType, true);
-                var colunaChaveRelacional = obterColunaChave(instanciaAtributo, false);
+                var genericAttributeInstance = Activator.CreateInstance(genericAttributeFilter.PropertyType, true);
+                var relationKeyColumn = getKeyColumn(attributeInstance, false);
 
-                definirChaveHashEntidade(entidadeCarregada, instanciaAtributoGenerico);
+                setEntityHashKey(loadedEntity, genericAttributeInstance);
 
-                var atributosGenericos = Listar(instanciaAtributoGenerico, instanciaAtributoGenerico.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
+                var genericAttributes = List(genericAttributeInstance, genericAttributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
 
-                identidadesAtributosGenericos = new List<int>();
+                genericAttributesId = new List<int>();
 
-                foreach (var atributoGenerico in atributosGenericos)
+                foreach (var genAttrib in genericAttributes)
                 {
-                    var colunaChaveAtributoGenerico = obterColunaChave(atributoGenerico, false);
+                    var genericAttributeKeyColumn = getKeyColumn(genAttrib, false);
 
-                    identidadesAtributosGenericos.Add(int.Parse(
-                    colunaChaveAtributoGenerico.GetValue(atributoGenerico, null).ToString()));
+                    genericAttributesId.Add(int.Parse(
+                    genericAttributeKeyColumn.GetValue(genAttrib, null).ToString()));
 
-                    colunaChaveRelacional.SetValue(instanciaAtributo, int.Parse(ValoresPadraoCamposSql.Falso), null);
+                    relationKeyColumn.SetValue(attributeInstance, int.Parse(SqlDefaultValue.False), null);
                 }
 
-                if (identidadesAtributosGenericos.Count > 0)
-                    instanciaAtributo = Consultar(instanciaAtributo, instanciaAtributo.GetType(), identidadesAtributosGenericos, true);
+                if (genericAttributesId.Count > 0)
+                    attributeInstance = View(attributeInstance, attributeInstance.GetType(), genericAttributesId, true);
 
-                resultado = true;
+                result = true;
             }
 
-            return resultado;
+            return result;
         }
 
         private void migrateEntityPrimaryKey(object entity, object filterEntity)
@@ -533,112 +534,114 @@ namespace System.Data.RopSql
 
         private int setPersistenceAction(object entity, PropertyInfo entityKeyColumn)
         {
-            return (entityKeyColumn.GetValue(entity, null).ToString().Equals(ValoresPadraoCamposSql.Zerado))
+            return (entityKeyColumn.GetValue(entity, null).ToString().Equals(SqlDefaultValue.Zero))
                     ? (int)PersistenceAction.Create : (int)PersistenceAction.Edit;
         }
 
-        private IList parseDatabaseReturn(XmlDocument retornoBancoDados, Type tipoEntidade)
+        private IList parseDatabaseReturn(XmlDocument databaseReturn, Type entityType)
         {
-            Type tipoDinamicoLista = typeof(List<>).MakeGenericType(new Type[] { tipoEntidade });
-            object listaRetorno = Activator.CreateInstance(tipoDinamicoLista, true);
-            object entidadeRetorno = null;
-            XmlNodeList listaElementos;
+            Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
+            object returnList = Activator.CreateInstance(dynamicListType, true);
+            object returnEntity = null;
+            XmlNodeList elementList;
             
-            listaElementos = retornoBancoDados.GetElementsByTagName("Table");
+            elementList = databaseReturn.GetElementsByTagName("Table");
 
-            foreach (XmlNode elementoEntidade in listaElementos)
+            foreach (XmlNode elem in elementList)
             {
-                entidadeRetorno = Activator.CreateInstance(tipoEntidade, true);
+                returnEntity = Activator.CreateInstance(entityType, true);
 
-                foreach (XmlNode elementoAtributo in elementoEntidade.ChildNodes)
+                foreach (XmlNode childElem in elem.ChildNodes)
                 {
-                    foreach (PropertyInfo campo in tipoEntidade.GetProperties())
+                    foreach (PropertyInfo prop in entityType.GetProperties())
                     {
-                        if (campo.GetCustomAttributes(false).FirstOrDefault(ca => (ca is ColunaDados 
-                                                                                      && ((ColunaDados)ca).NomeColuna.Equals(elementoAtributo.Name))
-                                                                                      || (ca is ColunaRelacional 
-                                                                                             && (((((ColunaRelacional)ca).NomeColuna.Equals(elementoAtributo.Name)
-                                                                                                  && ((ColunaRelacional)ca).CodeNomeColuna == null))
-                                                                                                 || (((ColunaRelacional)ca).CodeNomeColuna != null
-                                                                                                 && ((ColunaRelacional)ca).CodeNomeColuna.Equals(elementoAtributo.Name))))) != null)
+                        if (prop.GetCustomAttributes(false).FirstOrDefault(ca => (ca is DataAnnotations.DataColumn
+                                                                                      && ((DataAnnotations.DataColumn)ca).ColumnName.Equals(childElem.Name))
+                                                                                      || (ca is RelationalColumn
+                                                                                             && (((((RelationalColumn)ca).ColumnName.Equals(childElem.Name)
+                                                                                                  && ((RelationalColumn)ca).ColumnAlias == null))
+                                                                                                 || (((RelationalColumn)ca).ColumnAlias != null
+                                                                                                 && ((RelationalColumn)ca).ColumnAlias.Equals(childElem.Name))))) != null)
                             
-                            campo.SetValue(entidadeRetorno, formatarValorSaidaCampoSQL(elementoAtributo.InnerText, campo.PropertyType), null);
+                            prop.SetValue(returnEntity, formatSQLOutputValue(childElem.InnerText, prop.PropertyType), null);
                     }
                 }
 
-                ((IList)listaRetorno).Add(entidadeRetorno);
+                ((IList)returnList).Add(returnEntity);
             }
 
-            return (IList)listaRetorno;
+            return (IList)returnList;
         }
 
-        private Dictionary<object, object> getAnnotationValueList(object entidade, Type tipoEntidade, int acao, List<int> filtrosChavePrimaria, out Dictionary<object, object> parametrosComando)
+        private Dictionary<object, object> getAnnotationValueList(object entity, Type entityType, int action, List<int> primaryKeyFilters, out Dictionary<object, object> commandParameters)
         {
-            var associacaoDadosObjetoSQL = new Dictionary<object, object>();
-            parametrosComando = new Dictionary<object, object>();
+            var objectSQLDataRelation = new Dictionary<object, object>();
+            commandParameters = new Dictionary<object, object>();
 
-            associacaoDadosObjetoSQL.Add("Classe", tipoEntidade.Name);
+            objectSQLDataRelation.Add("Class", entityType.Name);
 
-            object[] anotacoesClasse = tipoEntidade.GetCustomAttributes(true);
+            object[] classAnnotations = entityType.GetCustomAttributes(true);
 
-            var anotacaoTabela = anotacoesClasse.FirstOrDefault(ant => ant.GetType().Name.Equals("Tabela"));
-            if (anotacaoTabela != null)
-                associacaoDadosObjetoSQL.Add("Tabela", ((Tabela)anotacaoTabela).NomeTabela.ToLower());
+            var tableAnnotation = classAnnotations.FirstOrDefault(ant => ant.GetType().Name.Equals("Table"));
+            if (tableAnnotation != null)
+                objectSQLDataRelation.Add("Table", ((DataAnnotations.DataTable)tableAnnotation).TableName.ToLower());
 
-            PropertyInfo atributoChavePrimaria = obterColunaChave(entidade, false);
+            PropertyInfo primaryKeyAttribute = getKeyColumn(entity, false);
 
-            PropertyInfo[] listaAtributos = tipoEntidade.GetProperties();
+            PropertyInfo[] attributeList = entityType.GetProperties();
 
-            foreach (var atributo in listaAtributos)
+            foreach (var attrib in attributeList)
             {
-                object[] anotacoesAtributo = atributo.GetCustomAttributes(true);
+                object[] attributeAnnotations = attrib.GetCustomAttributes(true);
 
-                foreach (object anotacao in anotacoesAtributo.Where(ca => ca is IColunaDados))
+                foreach (object annotation in attributeAnnotations.Where(ca => ca is IDataColumn))
                 {
-                    object valorCampo = atributo.GetValue(Convert.ChangeType(entidade, tipoEntidade), null);
-                    valorCampo = formatarValorEntradaCampoSQL(valorCampo, acao, (IColunaDados)anotacao, parametrosComando);
+                    object columnValue = attrib.GetValue(Convert.ChangeType(entity, entityType), null);
+                    columnValue = formatSQLInputValue(columnValue, action, (IDataColumn)annotation, commandParameters);
 
-                    if (anotacao.GetType().Name.Equals("ColunaDados"))
+                    if (annotation.GetType().Name.Equals("DataColumn"))
                     {
-                        object campoValorSQL = null;
+                        object sqlValueColumn = null;
 
-                        if (!(acao == (int)AcaoPersistencia.Inclusao 
-                            && ((ColunaDados)anotacao).AutoNumeracao))
+                        var annotationRef = (DataAnnotations.DataColumn)annotation;
+
+                        if (!(action == (int)PersistenceAction.Create 
+                            && (annotationRef).AutoNumbering))
                         {
-                            if (filtrosChavePrimaria == null 
-                                || ((filtrosChavePrimaria != null) && !((ColunaDados)anotacao).Filtravel))
+                            if (primaryKeyFilters == null
+                                || ((primaryKeyFilters != null) && !annotationRef.Filterable))
                             {
-                                campoValorSQL = new KeyValuePair<object, object>(((ColunaDados)anotacao).NomeColuna, valorCampo);
-                                associacaoDadosObjetoSQL.Add(atributo.Name, campoValorSQL);
+                                sqlValueColumn = new KeyValuePair<object, object>(annotationRef.ColumnName, columnValue);
+                                objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);
                             }
                             else
                             {
-                                if (((ColunaDados)anotacao).Filtravel && ((ColunaDados)anotacao).MultiplosFiltros)
+                                if (annotationRef.Filterable && annotationRef.MultipleFilters)
                                 {
-                                    string intervaloChaves = string.Empty;
+                                    string keysInterval = string.Empty;
 
-                                    foreach (var filtroChave in filtrosChavePrimaria)
-                                        intervaloChaves += string.Concat(filtroChave.ToString(), ",");
+                                    foreach (var filtroChave in primaryKeyFilters)
+                                        keysInterval += string.Concat(filtroChave.ToString(), ",");
 
-                                    campoValorSQL = new KeyValuePair<object, object>(
-                                                    ((ColunaDados)anotacao).NomeColuna,
-                                                    intervaloChaves.Substring(0, intervaloChaves.Length - 1));
+                                    sqlValueColumn = new KeyValuePair<object, object>(
+                                                    (annotationRef).ColumnName,
+                                                    keysInterval.Substring(0, keysInterval.Length - 1));
 
-                                    associacaoDadosObjetoSQL.Add(atributo.Name, campoValorSQL);
+                                    objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);
                                 }
                             }
                         }
                     }
-                    else if (anotacao.GetType().Name.Equals("ColunaRelacional")
-                            && ((acao == (int)AcaoPersistencia.Listagem) || (acao == (int)AcaoPersistencia.Consulta)))
+                    else if (annotation.GetType().Name.Equals("RelationalColumn")
+                            && ((action == (int)PersistenceAction.List) || (action == (int)PersistenceAction.View)))
                     {
-                        object campoValorSQL = new KeyValuePair<object, object>((ColunaRelacional)anotacao, valorCampo);
-                        associacaoDadosObjetoSQL.Add(atributo.Name, campoValorSQL);
+                        object sqlValueColumn = new KeyValuePair<object, object>((RelationalColumn)annotation, columnValue);
+                        objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);
                     }
                 }
             }
 
-            return associacaoDadosObjetoSQL;
+            return objectSQLDataRelation;
         }
 
         private Dictionary<string, string> obterParametrosSQL(Dictionary<object, object> dadosSQLEntidade, int acao, Dictionary<object, object> dadosSQLFiltro, string[] atributosExibir, string nomeColunaChave, long hashEntidade, bool filtrosMultiplos, bool obterExclusao)
@@ -957,90 +960,90 @@ namespace System.Data.RopSql
             }
         }
 
-        private object formatarValorEntradaCampoSQL(object valorCampoSQL, int acao, IDataColumn configCampo, Dictionary<object, object> parametrosComando)
+        private object formatSQLInputValue(object columnValue, int action, IDataColumn columnConfig, Dictionary<object, object> commandParameters)
         {
-            if (valorCampoSQL != null)
+            if (columnValue != null)
             {
-                switch (valorCampoSQL.GetType().ToString())
+                switch (columnValue.GetType().ToString())
                 {
-                    case TiposDeDados.InteiroCurto:
-                        if (((short)valorCampoSQL == 0) && (!configCampo.EhRequerida()))
-                            valorCampoSQL = ValoresPadraoCamposSql.Nulo;
+                    case DataType.Short:
+                        if (((short)columnValue == 0) && (!columnConfig.IsRequired()))
+                            columnValue = SqlDefaultValue.Null;
                         break;
-                    case TiposDeDados.Inteiro:
-                        if (((int)valorCampoSQL == 0) && ((!configCampo.EhRequerida()) || (acao == (int)AcaoPersistencia.Listagem)))
-                            valorCampoSQL = ValoresPadraoCamposSql.Nulo;
+                    case DataType.Integer:
+                        if (((int)columnValue == 0) && ((!columnConfig.IsRequired()) || (action == (int)PersistenceAction.List)))
+                            columnValue = SqlDefaultValue.Null;
                         break;
-                    case TiposDeDados.InteiroLongo:
-                        if (((long)valorCampoSQL == 0) && (!configCampo.EhRequerida()))
-                            valorCampoSQL = ValoresPadraoCamposSql.Nulo;
+                    case DataType.Long:
+                        if (((long)columnValue == 0) && (!columnConfig.IsRequired()))
+                            columnValue = SqlDefaultValue.Null;
                         break;
-                    case TiposDeDados.Texto:
-                        valorCampoSQL = "'" + valorCampoSQL + "'";
+                    case DataType.String:
+                        columnValue = string.Concat("'", columnValue, "'");
                         break;
-                    case TiposDeDados.DataHora:
-                        if (!(((DateTime)valorCampoSQL).Equals(DateTime.MinValue)))
-                            valorCampoSQL = "'" + ((DateTime)valorCampoSQL).ToString(FormatoDatas.DataHoraCompleta) + "'";
+                    case DataType.DateTime:
+                        if (!(((DateTime)columnValue).Equals(DateTime.MinValue)))
+                            columnValue = "'" + ((DateTime)columnValue).ToString(DateTimeFormat.CompleteDateTime) + "'";
                         else
-                            valorCampoSQL = ValoresPadraoCamposSql.Nulo;
+                            columnValue = SqlDefaultValue.Null;
                         break;
-                    case TiposDeDados.Binario :
-                        parametrosComando.Add(string.Concat("@", configCampo.ObterNomeColuna()),
-                                              (byte[])valorCampoSQL);
+                    case DataType.Binary:
+                        commandParameters.Add(string.Concat("@", columnConfig.GetColumnName()),
+                                             (byte[])columnValue);
 
-                        valorCampoSQL = string.Concat("@", configCampo.ObterNomeColuna());
+                        columnValue = string.Concat("@", columnConfig.GetColumnName());
                         
                         break;
                 }
             }
             else
             {
-                valorCampoSQL = (acao == (int)AcaoPersistencia.Inclusao) ? ValoresPadraoCamposSql.Nulo : null;
+                columnValue = (action == (int)PersistenceAction.Create) ? SqlDefaultValue.Null : null;
             }
 
-            return valorCampoSQL;
+            return columnValue;
         }
 
-        private object formatarValorSaidaCampoSQL(string valorCampoSQL, Type tipoDadoCampo)
+        private object formatSQLOutputValue(string columnValue, Type columnDataType)
         {
-            object retorno = null;
+            object result = null;
 
-            if (!string.IsNullOrEmpty(valorCampoSQL))
-                retorno = Convert.ChangeType(valorCampoSQL, tipoDadoCampo);
+            if (!string.IsNullOrEmpty(columnValue))
+                result = Convert.ChangeType(columnValue, columnDataType);
 
-            return retorno;
+            return result;
         }
 
-        private void validateListableAttributes(Type tipoEntidade, string atributosExibir, out string[] atributosExibicao)
+        private void validateListableAttributes(Type entityType, string showAttributes, out string[] exibitionAttributes)
         {
-            IEnumerable<PropertyInfo> atributosListaveis = null;
-            bool atributoNaoListavel = false;
-            string siglaIdioma = ConfigurationManager.AppSettings["Idioma"];
+            IEnumerable<PropertyInfo> listableAttributes = null;
+            bool notListableAttribute = false;
+            string cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
 
-            atributosListaveis = tipoEntidade.GetProperties().
-                                              Where(prp => ((PropertyInfo)prp).GetCustomAttributes(true).
-                                              Where(ca => ((ca is ColunaDados) || (ca is ColunaRelacional))
-                                                       && ((IColunaDados)ca).EhListavel()).Any());
+            exibitionAttributes = entityType.GetProperties().
+                                             Where(prp => ((PropertyInfo)prp).GetCustomAttributes(true).
+                                             Where(ca => ((ca is DataAnnotations.DataColumn) || (ca is RelationalColumn))
+                                                      && ((IDataColumn)ca).IsListable()).Any());
 
-            if (atributosExibir == string.Empty)
+            if (showAttributes == string.Empty)
             {
-                atributosExibicao = new string[atributosListaveis.Count()];
+                exibitionAttributes = new string[listableAttributes.Count()];
 
                 int cont = 0;
-                foreach (var atributoListavel in atributosListaveis)
+                foreach (var listableAttrib in listableAttributes)
                 {
-                    atributosExibicao[cont] = atributoListavel.Name;
+                    exibitionAttributes[cont] = listableAttrib.Name;
                     cont++;
                 }
             }
             else
             {
-                atributosExibicao = atributosExibir.Split(',');
+                exibitionAttributes = showAttributes.Split(',');
 
-                foreach (var atributo in atributosExibicao)
+                foreach (var attrib in exibitionAttributes)
                 {
-                    atributoNaoListavel = !atributosListaveis.Contains(tipoEntidade.GetProperty(atributo));
-                    if (!atributoNaoListavel) throw new ExcecaoAtributoNaoListavel(siglaIdioma); break;
+                    notListableAttribute = !listableAttributes.Contains(entityType.GetProperty(attrib));
+                    if (!notListableAttribute) throw new AttributeNotListableException(cultureAcronym); break;
                 }
             }
         }
@@ -1053,14 +1056,14 @@ namespace System.Data.RopSql
                 entityKeyColumn = entity.GetType().GetProperties().FirstOrDefault(fd =>
                                                    (fd.GetCustomAttributes(true).Any(ca =>
                                                    (ca.GetType().Name.Equals("DataColumn")
-                                                    && ((ColunaDados)ca).EhChavePrimaria()))));
+                                                    && ((DataAnnotations.DataColumn)ca).IsPrimaryKey()))));
             else
-                colunaChaveEntidade = entidade.GetType().GetProperties().LastOrDefault(fd =>
-                                                      (fd.GetCustomAttributes(true).Any(ca =>
-                                                      (ca.GetType().Name.Equals("DataColumn")
-                                                        && ((ColunaDados)ca).EhChaveEstrangeira()))));
+                entityKeyColumn = entity.GetType().GetProperties().LastOrDefault(fd =>
+                                                   (fd.GetCustomAttributes(true).Any(ca =>
+                                                   (ca.GetType().Name.Equals("DataColumn")
+                                                       && ((DataAnnotations.DataColumn)ca).IsPrimaryKey()))));
 
-            return colunaChaveEntidade;
+            return entityKeyColumn;
         }
 
         #endregion
