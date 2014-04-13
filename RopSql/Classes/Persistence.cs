@@ -644,229 +644,231 @@ namespace System.Data.RopSql
             return objectSQLDataRelation;
         }
 
-        private Dictionary<string, string> obterParametrosSQL(Dictionary<object, object> dadosSQLEntidade, int acao, Dictionary<object, object> dadosSQLFiltro, string[] atributosExibir, string nomeColunaChave, long hashEntidade, bool filtrosMultiplos, bool obterExclusao)
+        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, bool multipleFilters, bool getExclusion)
         {
-            var dicionarioRetorno = new Dictionary<string, string>();
-            var dicionarioRelacionamentos = new Dictionary<string, string>();
+            var returnDictionary = new Dictionary<string, string>();
+            var relationshipDictionary = new Dictionary<string, string>();
 
-            string _nomeTabela = string.Empty;
-            string _listaCampos = string.Empty;
-            string _listaValores = string.Empty;
-            string _listaCamposComValores = string.Empty;
-            string _listaCamposFiltro = string.Empty;
-            string _listaRelacionamentos = string.Empty;
-            string _relacionamento = string.Empty;
+            string tableName = string.Empty;
+            string columnList = string.Empty;
+            string valueList = string.Empty;
+            string columnValueList = string.Empty;
+            string columnFilterList = string.Empty;
+            string relationList = string.Empty;
+            string relation = string.Empty;
 
-            foreach (var item in dadosSQLEntidade.Where(item => !item.Key.Equals("Classe")))
+            foreach (var item in entitySqlData.Where(item => !item.Key.Equals("Class")))
             {
-                _relacionamento = string.Empty;
+                relation = string.Empty;
 
-                if (item.Key.Equals("Tabela"))
+                if (item.Key.Equals("Table"))
                 {
-                    dicionarioRetorno.Add(item.Key.ToString(), item.Value.ToString());
-                    _nomeTabela = item.Value.ToString().ToLower();
+                    returnDictionary.Add(item.Key.ToString(), item.Value.ToString());
+                    tableName = item.Value.ToString().ToLower();
                 }
-                else if (((KeyValuePair<object, object>)item.Value).Key is ColunaRelacional)
+                else if (((KeyValuePair<object, object>)item.Value).Key is RelationalColumn)
                 {
-                    ColunaRelacional configRelacao = ((KeyValuePair<object, object>)item.Value).Key as ColunaRelacional;
+                    RelationalColumn relationConfig = ((KeyValuePair<object, object>)item.Value).Key as RelationalColumn;
 
-                    _listaCampos += string.Format("{0}.{1} ", configRelacao.NomeTabela.ToLower(), configRelacao.NomeColuna);
+                    columnList += string.Format("{0}.{1} ", relationConfig.TableName.ToLower(), relationConfig.ColumnName);
 
-                    if (!string.IsNullOrEmpty(configRelacao.CodeNomeColuna))
-                        _listaCampos += string.Format(RepositorioSQL.PersistenciaDados_Acao_ApelidarColuna, configRelacao.CodeNomeColuna);
+                    if (!string.IsNullOrEmpty(relationConfig.ColumnAlias))
+                        columnList += string.Format(SQLANSIRepository.DataPersistence_Action_ColumnName, relationConfig.ColumnAlias);
 
-                    _listaCampos += ", ";
+                    columnList += ", ";
 
-                    if (configRelacao.TipoJuncao == TipoJuncaoRelacional.Obrigatoria)
+                    if (relationConfig.JunctionType == RelationalJunctionType.Mandatory)
                     {
-                        _relacionamento = string.Format(RepositorioSQL.PersistenciaDados_Acao_RelacionarObrigatoriamente,
-                                                        configRelacao.NomeTabela.ToLower(),
-                                                        string.Concat(_nomeTabela, ".", configRelacao.ColunaChave),
-                                                        string.Concat(configRelacao.NomeTabela.ToLower(), ".", configRelacao.ColunaChaveEstrangeira));
+                        relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateMandatorily,
+                                                                relationConfig.TableName.ToLower(),
+                                                                string.Concat(tableName, ".", relationConfig.KeyColumn),
+                                                                string.Concat(relationConfig.TableName.ToLower(), ".", 
+                                                                relationConfig.ForeignKeyColumn));
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(configRelacao.NomeTabelaIntermediaria))
+                        if (!string.IsNullOrEmpty(relationConfig.IntermediaryColumnName))
                         {
-                            _relacionamento = string.Format(RepositorioSQL.PersistenciaDados_Acao_RelacionarOpcionalmente,
-                                                             configRelacao.NomeTabelaIntermediaria.ToLower(),
-                                                             string.Concat(_nomeTabela, ".", configRelacao.ColunaChaveEstrangeira),
-                                                             string.Concat(configRelacao.NomeTabelaIntermediaria.ToLower(), ".", configRelacao.ColunaChaveIntermediaria));
+                            relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
+                                                     relationConfig.IntermediaryColumnName.ToLower(),
+                                                     string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
+                                                     string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".", 
+                                                     relationConfig.ForeignKeyColumn));
 
-                            _relacionamento += string.Format(RepositorioSQL.PersistenciaDados_Acao_RelacionarOpcionalmente,
-                                                             configRelacao.NomeTabela.ToLower(),
-                                                             string.Concat(configRelacao.NomeTabelaIntermediaria.ToLower(), ".", configRelacao.ColunaChave),
-                                                             string.Concat(configRelacao.NomeTabela.ToLower(), ".", configRelacao.ColunaChaveEstrangeira));
+                            relation += string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
+                                                      relationConfig.TableName.ToLower(),
+                                                      string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".", relationConfig.KeyColumn),
+                                                      string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn));
 
-                            if (configRelacao.RelacionaHash)
-                                _relacionamento += string.Format(" AND NR_HASH_REFERENCIA = {0} ", hashEntidade);
+                            if (relationConfig.ConnectHash)
+                                relation += string.Format(" AND NR_HASH_REFERENCIA = {0} ", entityHash);
                         }
                         else
                         {
-                            _relacionamento = string.Format(RepositorioSQL.PersistenciaDados_Acao_RelacionarOpcionalmente,
-                                                             configRelacao.NomeTabela.ToLower(),
-                                                             string.Concat(_nomeTabela, ".", configRelacao.ColunaChaveEstrangeira),
-                                                             string.Concat(configRelacao.NomeTabela.ToLower(), ".", configRelacao.ColunaChave));
+                            relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
+                                                     relationConfig.TableName.ToLower(),
+                                                     string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
+                                                     string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.KeyColumn));
                         }
                     }
                     
-                    if (_relacionamento.Contains(_listaRelacionamentos)
-                        || string.IsNullOrEmpty(_listaRelacionamentos))
-                        _listaRelacionamentos = _relacionamento;
-                    else if (!_listaRelacionamentos.Contains(_relacionamento))
-                        _listaRelacionamentos += _relacionamento;
+                    if (relation.Contains(relationList)
+                        || string.IsNullOrEmpty(relationList))
+                        relationList = relation;
+                    else if (!relationList.Contains(relation))
+                        relationList += relation;
                 }
-                else if (item.Key.Equals("EntidadeRelacionada"))
+                else if (item.Key.Equals("RelatedEntity"))
                 {
 
                 }
                 else
                 {
-                    string nomeAtributoEntidade = item.Key.ToString();
-                    object nomeCampoEntidade = ((KeyValuePair<object, object>)item.Value).Key;
-                    object valorCampoEntidade = ((KeyValuePair<object, object>)item.Value).Value;
+                    string entityAttributeName = item.Key.ToString();
+                    object entityColumnName = ((KeyValuePair<object, object>)item.Value).Key;
+                    object entityColumnValue = ((KeyValuePair<object, object>)item.Value).Value;
 
-                    switch (acao)
+                    switch (action)
                     {
-                        case (int)AcaoPersistencia.Inclusao:
-                            _listaCampos += string.Format("{0}, ", nomeCampoEntidade);
-                            _listaValores += string.Format("{0}, ", valorCampoEntidade);
+                        case (int)PersistenceAction.Create:
+                            columnList += string.Format("{0}, ", entityColumnName);
+                            valueList += string.Format("{0}, ", entityColumnValue);
                             
                             break;
-                        case (int)AcaoPersistencia.Listagem:
-                            if (atributosExibir.Length > 0)
-                                for (int vC = 0; vC < atributosExibir.Length; vC++)
-                                    atributosExibir[vC] = atributosExibir[vC].Trim();
-                            if ((atributosExibir.Length == 0)
-                                || atributosExibir.Length > 0 && Array.IndexOf(atributosExibir, nomeAtributoEntidade) > -1)
-                                _listaCampos += string.Format("{0}.{1}, ", _nomeTabela, nomeCampoEntidade);
+                        case (int)PersistenceAction.List:
+                            if (showAttributes.Length > 0)
+                                for (int vC = 0; vC < showAttributes.Length; vC++)
+                                    showAttributes[vC] = showAttributes[vC].Trim();
+                            if ((showAttributes.Length == 0)
+                                || showAttributes.Length > 0 && Array.IndexOf(showAttributes, entityAttributeName) > -1)
+                                columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
                             
                             break;
-                        case (int)AcaoPersistencia.Consulta:
-                            if (atributosExibir.Length > 0)
-                                for (int vC = 0; vC < atributosExibir.Length; vC++)
-                                    atributosExibir[vC] = atributosExibir[vC].Trim();
-                            if ((atributosExibir.Length == 0)
-                                || atributosExibir.Length > 0 && Array.IndexOf(atributosExibir, nomeAtributoEntidade) > -1)
-                                _listaCampos += string.Format("{0}.{1}, ", _nomeTabela, nomeCampoEntidade);
+                        case (int)PersistenceAction.View:
+                            if (showAttributes.Length > 0)
+                                for (int vC = 0; vC < showAttributes.Length; vC++)
+                                    showAttributes[vC] = showAttributes[vC].Trim();
+                            if ((showAttributes.Length == 0)
+                                || showAttributes.Length > 0 && Array.IndexOf(showAttributes, entityAttributeName) > -1)
+                                columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
 
                             break;
                         default: // Alteração e Exclusão
-                            if ((valorCampoEntidade != null)
-                                && (valorCampoEntidade.ToString() != ValoresPadraoCamposSql.Zerado)
-                                && (valorCampoEntidade.ToString() != ValoresPadraoCamposSql.Nulo))
-                                _listaCamposComValores += string.Format("{0} = {1}, ", nomeCampoEntidade, valorCampoEntidade);
+                            if ((entityColumnValue != null)
+                                && (entityColumnValue.ToString() != SqlDefaultValue.Zero)
+                                && (entityColumnValue.ToString() != SqlDefaultValue.Null))
+                                columnValueList += string.Format("{0} = {1}, ", entityColumnName, entityColumnValue);
                             
                             break;
                     }
                 }
             }
-            if (dadosSQLFiltro != null)
+            if (entitySqlFilter != null)
             {
-                foreach (var itemFiltro in dadosSQLFiltro)
+                foreach (var filter in entitySqlFilter)
                 {
-                    if ((!itemFiltro.Key.Equals("Classe")) && (!itemFiltro.Key.Equals("Tabela"))
-                        && (!itemFiltro.Key.Equals("EntidadeRelacionada")))
+                    if ((!filter.Key.Equals("Class")) && (!filter.Key.Equals("Table"))
+                        && (!filter.Key.Equals("RelatedEntity")))
                     {
-                        object nomeCampoFiltro = null;
-                        object valorCampoFiltro = null;
-                        object nomeCampo = null;
+                        object filterColumnName = null;
+                        object filterColumnValue = null;
+                        object columnName = null;
 
-                        if (!(((KeyValuePair<object, object>)itemFiltro.Value).Key is ColunaRelacional))
+                        if (!(((KeyValuePair<object, object>)filter.Value).Key is RelationalColumn))
                         {
-                            nomeCampo = ((KeyValuePair<object, object>)itemFiltro.Value).Key;
-                            nomeCampoFiltro = string.Concat(_nomeTabela, ".", nomeCampo);
-                            valorCampoFiltro = ((KeyValuePair<object, object>)itemFiltro.Value).Value;
+                            columnName = ((KeyValuePair<object, object>)filter.Value).Key;
+                            filterColumnName = string.Concat(tableName, ".", columnName);
+                            filterColumnValue = ((KeyValuePair<object, object>)filter.Value).Value;
                         }
                         else
                         {
-                            ColunaRelacional configRelacao = ((KeyValuePair<object, object>)itemFiltro.Value).Key as ColunaRelacional;
+                            RelationalColumn relationConfig = ((KeyValuePair<object, object>)filter.Value).Key as RelationalColumn;
 
-                            if ((acao == (int)AcaoPersistencia.Listagem) && configRelacao.Filtravel)
+                            if ((action == (int)PersistenceAction.List) && relationConfig.Filterable)
                             {
-                                nomeCampoFiltro = string.Concat(configRelacao.NomeTabela.ToLower(), ".", configRelacao.NomeColuna);
-                                valorCampoFiltro = ((KeyValuePair<object, object>)itemFiltro.Value).Value;
+                                filterColumnName = string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ColumnName);
+                                filterColumnValue = ((KeyValuePair<object, object>)filter.Value).Value;
                             }
                         }
 
-                        if ((valorCampoFiltro != null)
-                                && (valorCampoFiltro.ToString() != ValoresPadraoCamposSql.Nulo)
-                                && (valorCampoFiltro.ToString() != ValoresPadraoCamposSql.Zerado))
+                        if ((filterColumnValue != null)
+                                && (filterColumnValue.ToString() != SqlDefaultValue.Null)
+                                && (filterColumnValue.ToString() != SqlDefaultValue.Zero))
                         {
-                            string comparacao = string.Empty;
+                            string comparation = string.Empty;
 
-                            if (!filtrosMultiplos)
-                                comparacao = ((acao == (int)AcaoPersistencia.Listagem) && !nomeCampoFiltro.ToString().Contains("DT_"))
-                                              ? string.Format(OperadoresSql.Contem, valorCampoFiltro.ToString().Replace("'", string.Empty))
-                                              : string.Concat(OperadoresSql.Igual, valorCampoFiltro);
+                            if (!multipleFilters)
+                                comparation = ((action == (int)PersistenceAction.List) && !filterColumnName.ToString().Contains("DT_"))
+                                              ? string.Format(SqlOperator.Contains, filterColumnValue.ToString().Replace("'", string.Empty))
+                                              : string.Concat(SqlOperator.Equal, filterColumnValue);
                             else
                             {
-                                if (valorCampoFiltro.ToString().Contains(','))
+                                if (filterColumnValue.ToString().Contains(','))
                                 {
-                                    comparacao = string.Format(OperadoresSql.Em, valorCampoFiltro);
-                                    if (obterExclusao) comparacao = string.Concat(OperadoresSql.Negacao, comparacao);
+                                    comparation = string.Format(SqlOperator.And, filterColumnValue);
+                                    if (getExclusion) comparation = string.Concat(SqlOperator.Not, comparation);
                                 }
                                 else
                                 {
-                                    if (!obterExclusao)
-                                        comparacao = string.Concat(OperadoresSql.Igual, valorCampoFiltro);
+                                    if (!getExclusion)
+                                        comparation = string.Concat(SqlOperator.Equal, filterColumnValue);
                                     else
                                     {
-                                        if (nomeCampo.Equals(nomeColunaChave))
-                                            comparacao = string.Concat(OperadoresSql.Diferente, valorCampoFiltro);
+                                        if (columnName.Equals(keyColumnName))
+                                            comparation = string.Concat(SqlOperator.Different, filterColumnValue);
                                         else
-                                            comparacao = string.Concat(OperadoresSql.Igual, valorCampoFiltro);
+                                            comparation = string.Concat(SqlOperator.Equal, filterColumnValue);
                                     }
                                 }
                             }
 
-                            _listaCamposFiltro += nomeCampoFiltro + comparacao +
-                                ((acao == (int)AcaoPersistencia.Listagem) ? OperadoresSql.Ou : OperadoresSql.E);
+                            columnFilterList += filterColumnName + comparation +
+                                ((action == (int)PersistenceAction.List) ? SqlOperator.Or : SqlOperator.And);
                         }
                     }
                 }
             }
 
-            if (acao == (int)AcaoPersistencia.Inclusao)
+            if (action == (int)PersistenceAction.Create)
             {
-                _listaCampos = _listaCampos.Substring(0, _listaCampos.Length - 2);
-                _listaValores = _listaValores.Substring(0, _listaValores.Length - 2);
+                columnList = columnList.Substring(0, columnList.Length - 2);
+                valueList = valueList.Substring(0, valueList.Length - 2);
 
-                dicionarioRetorno.Add("listaCampos", _listaCampos);
-                dicionarioRetorno.Add("listaValores", _listaValores);
+                returnDictionary.Add("columnList", columnList);
+                returnDictionary.Add("valueList", valueList);
             }
             else
             {
-                if ((acao == (int)AcaoPersistencia.Listagem)
-                    || (acao == (int)AcaoPersistencia.Consulta))
+                if ((action == (int)PersistenceAction.List)
+                    || (action == (int)PersistenceAction.View))
                 {
-                    _listaCampos = _listaCampos.Substring(0, _listaCampos.Length - 2);
-                    dicionarioRetorno.Add("listaCampos", _listaCampos);
-                    dicionarioRetorno.Add("listaRelacionamentos", _listaRelacionamentos);
+                    columnList = columnList.Substring(0, columnList.Length - 2);
+                    returnDictionary.Add("columnList", columnList);
+                    returnDictionary.Add("relationList", relationList);
                 }
                 else
-                    if (!string.IsNullOrEmpty(_listaCamposComValores))
+                    if (!string.IsNullOrEmpty(columnValueList))
                     {
-                        _listaCamposComValores = _listaCamposComValores.Substring(0, _listaCamposComValores.Length - 2);
+                        columnValueList = columnValueList.Substring(0, columnValueList.Length - 2);
 
-                        dicionarioRetorno.Add("listaCamposComValores", _listaCamposComValores);
+                        returnDictionary.Add("columnValueList", columnValueList);
                     }
 
-                if (!string.IsNullOrEmpty(_listaCamposFiltro))
+                if (!string.IsNullOrEmpty(columnFilterList))
                 {
-                    var caracRemover = (acao == (int)AcaoPersistencia.Listagem)
-                                       ? OperadoresSql.Ou.Length 
-                                       : OperadoresSql.E.Length;
+                    var tokenRemove = (action == (int)PersistenceAction.List)
+                                       ? SqlOperator.Or.Length 
+                                       : SqlOperator.And.Length;
 
-                    _listaCamposFiltro = _listaCamposFiltro.Substring(0, _listaCamposFiltro.Length - caracRemover);
+                    columnFilterList = columnFilterList.Substring(0, columnFilterList.Length - tokenRemove);
 
-                    dicionarioRetorno.Add("listaCamposFiltro", _listaCamposFiltro);
+                    returnDictionary.Add("columnFilterList", columnFilterList);
                 }
                 else
-                    dicionarioRetorno.Add("listaCamposFiltro", "1 = 1");
+                    returnDictionary.Add("columnFilterList", "1 = 1");
             }
 
-            return dicionarioRetorno;
+            return returnDictionary;
         }
 
         public void fillComposition(object entidadeCarregada, Type tipoEntidade)
