@@ -8,6 +8,7 @@ using System.Data.RopSql.Exceptions;
 using System.Xml;
 using System.Text;
 using System.Data.SqlServerCe;
+using System.Security.InMemProfile;
 
 namespace System.Data.RopSql
 {
@@ -28,9 +29,9 @@ namespace System.Data.RopSql
         protected DataBaseCompactConnection()
         {
             connectionConfig = new Encrypter().DecryptText(
-                               ConfigurationManager.ConnectionStrings["SGE_ConnStr"].ConnectionString);
+                               ConfigurationManager.ConnectionStrings["RopSqlConnStr"].ConnectionString);
 
-            cultureAcronym = ConfigurationManager.AppSettings["Culture"];
+            cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
 
             connection = new SqlCeConnection(connectionConfig);
 

@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Data.RopSql.Resources;
 using System.Data.RopSql.Exceptions;
+using System.Security.InMemProfile;
 using System.Xml;
 using System.Text;
 
@@ -27,9 +28,9 @@ namespace System.Data.RopSql
         protected DataBaseOleDbConnection()
         {
             connectionConfig = new Encrypter().DecryptText(
-                               ConfigurationManager.ConnectionStrings["SGE_ConnStr"].ConnectionString);
+                               ConfigurationManager.ConnectionStrings["RopSqlConnStr"].ConnectionString);
 
-            cultureAcronym = ConfigurationManager.AppSettings["Culture"];
+            cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
 
             connection = new SqlConnection(connectionConfig);
 

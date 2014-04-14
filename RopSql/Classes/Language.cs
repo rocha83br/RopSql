@@ -40,8 +40,8 @@ namespace System.Globalization.Language
             var messageRepository = MessageRepository.ResourceManager.GetResourceSet(new CultureInfo("pt-BR"), true, true);
             string returnMessage = string.Empty;
 
-            foreach (DictionaryEntry msg in repositorioMensagens)
-                if (msg.Key.ToString().Contains(string.Concat(chaveRepositorio, siglaIdioma)))
+            foreach (DictionaryEntry msg in messageRepository)
+                if (msg.Key.ToString().Contains(string.Concat(repositoryKey, cultureAcronym)))
                 {
                     returnMessage = msg.Value.ToString();
                     break;

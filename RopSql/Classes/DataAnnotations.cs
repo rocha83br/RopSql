@@ -35,6 +35,11 @@ namespace System.Data.RopSql.DataAnnotations
             return PrimaryKey;
         }
 
+        public bool IsRequired()
+        {
+            return Required;
+        }
+
         public bool IsForeignKey()
         {
             return ForeignKey;

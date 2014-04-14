@@ -6,6 +6,7 @@ using System.Data.Odbc;
 using System.Data.RopSql.Resources;
 using System.Xml;
 using System.Text;
+using System.Security.InMemProfile;
 using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
@@ -27,9 +28,9 @@ namespace System.Data.RopSql
         protected DataBaseODBCConnection()
         {
             connectionConfig = new Encrypter().DecryptText(
-                               ConfigurationManager.ConnectionStrings["SGE_ConnStr"].ConnectionString);
+                               ConfigurationManager.ConnectionStrings["RopSqlConnStr"].ConnectionString);
 
-            cultureAcronym = ConfigurationManager.AppSettings["Culture"];
+            cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
 
             connection = new OdbcConnection(connectionConfig);
 

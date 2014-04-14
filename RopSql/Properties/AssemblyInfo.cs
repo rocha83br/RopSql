@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("RopSql")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Relational Object Persistence SQL based")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("RopSql")]
-[assembly: AssemblyCopyright("Copyright ©  2014")]
+[assembly: AssemblyCompany("Ponto Certo Consultoria")]
+[assembly: AssemblyProduct("SGEv2")]
+[assembly: AssemblyCopyright("Copyright ©  Renato Rocha, 2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

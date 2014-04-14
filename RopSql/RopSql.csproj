@@ -35,12 +35,17 @@
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL" />
+    <Reference Include="System.Security.InMemProfile, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\System.Security.InMemProfile.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\DatabaseCompact.cs" />
     <Compile Include="Classes\DataAnnotations.cs" />
     <Compile Include="Classes\DataAdapter.cs" />
     <Compile Include="Classes\Database.cs" />
@@ -48,7 +53,7 @@
     <Compile Include="Classes\Exception.cs" />
     <Compile Include="Classes\Language.cs" />
     <Compile Include="Classes\Persistence.cs" />
-    <Compile Include="Interfaces\IAdaptadorDados.cs" />
+    <Compile Include="Interfaces\IDataAdapter.cs" />
     <Compile Include="Interfaces\IDataColumn.cs" />
     <Compile Include="Interfaces\IPersistence.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,7 +68,10 @@
       <DependentUpon>SQLANSIRepository.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Libs\System.Security.InMemProfile.dll" />
+    <Content Include="Libs\System.Security.InMemProfile.pdb" />
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\MessageRepository.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>

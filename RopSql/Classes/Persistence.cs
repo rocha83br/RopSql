@@ -62,7 +62,7 @@ namespace System.Data.RopSql
                     if (entityColumnKey != null)
                         entityColumnKey.SetValue(entity, lastInsertedId, null);
 
-                    childEntityCommands = traduzirComposicao(entity, entityType, (int)PersistenceAction.Create, null);
+                    childEntityCommands = parseComposition(entity, entityType, (int)PersistenceAction.Create, null);
 
                     foreach (var cmd in childEntityCommands)
                         executeCommand(cmd, commandParameters);
@@ -92,7 +92,7 @@ namespace System.Data.RopSql
 
             if (persistComposition)
             {
-                childEntityCommands = traduzirComposicao(entity, entityType, (int)PersistenceAction.Edit, filterEntity);
+                childEntityCommands = parseComposition(entity, entityType, (int)PersistenceAction.Edit, filterEntity);
 
                 foreach (var cmd in childEntityCommands)
                     recordsAffected += executeCommand(cmd, commandParameters);
@@ -248,7 +248,7 @@ namespace System.Data.RopSql
             return (IList)returnList;
 		}
 
-        public void SetSearchFilter(object entity, string filter)
+        public void DefineSearchFilter(object entity, string filter)
         {
             DateTime datetimeValue;
             int numericValue;
@@ -307,7 +307,7 @@ namespace System.Data.RopSql
                                        .FirstOrDefault(cln => cln is HashSignature) as HashSignature;
             var hashCode = entityHash != null ? entityHash.HashCode : 0;
 
-            Dictionary<string, string> sqlParameters = obterParametrosSQL(sqlEntityData, action, sqlFilterData, showAttributes, keyColumnName, hashCode, (primaryKeyFilters != null), getExclusion);
+            Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData, showAttributes, keyColumnName, hashCode, (primaryKeyFilters != null), getExclusion);
 
             switch(action)
             {
@@ -871,94 +871,94 @@ namespace System.Data.RopSql
             return returnDictionary;
         }
 
-        public void fillComposition(object entidadeCarregada, Type tipoEntidade)
+        public void fillComposition(object loadedEntity, Type entityType)
         {
-            EntidadeRelacionada configRelacao = null;
-            object instanciaAtributo = null;
+            RelatedEntity relationConfig = null;
+            object attributeInstance = null;
 
-            var listaAtributos = tipoEntidade.GetProperties()
-                                             .Where(prp => prp.GetCustomAttributes(true)
-                                                              .Any(atb => atb.GetType().Name.Equals("EntidadeRelacionada")));
+            var attributeList = entityType.GetProperties()
+                                          .Where(prp => prp.GetCustomAttributes(true)
+                                                           .Any(atb => atb.GetType().Name.Equals("RelatedEntity")));
 
-            foreach(var atributo in listaAtributos)
+            foreach(var attribute in attributeList)
             {
-                IEnumerable<object> anotacoesAtributo = atributo.GetCustomAttributes(true)
-                                                                .Where(atb => atb.GetType().Name.Equals("EntidadeRelacionada"));
+                IEnumerable<object> attributeAnnotations = attribute.GetCustomAttributes(true)
+                                                                    .Where(atb => atb.GetType().Name.Equals("RelatedEntity"));
 
-                foreach (object anotacao in anotacoesAtributo)
+                foreach (object annotation in attributeAnnotations)
                 {
-                    configRelacao = (EntidadeRelacionada)anotacao;
+                    relationConfig = (RelatedEntity)annotation;
 
-                    PropertyInfo colunaChaveEstrangeira = null;
+                    PropertyInfo foreignKeyColumn = null;
 
-                    PropertyInfo colunaChavePrimaria = obterColunaChave(entidadeCarregada, false);
+                    PropertyInfo primaryKeyColumn = getKeyColumn(loadedEntity, false);
 
-                    switch (configRelacao.Cardinalidade)
+                    switch (relationConfig.Cardinality)
                     {
-                        case CardinalidadeRelacao.UmParaUm :
+                        case RelationCardinality.OneToOne :
 
-                            instanciaAtributo = Activator.CreateInstance(atributo.PropertyType, true);
+                            attributeInstance = Activator.CreateInstance(attribute.PropertyType, true);
 
-                            colunaChaveEstrangeira = entidadeCarregada.GetType().GetProperty(configRelacao.AtributoChaveEstrangeira);
+                            foreignKeyColumn = loadedEntity.GetType().GetProperty(relationConfig.ForeignKeyAttribute);
 
-                            if (int.Parse(colunaChaveEstrangeira.GetValue(entidadeCarregada, null).ToString()) > 0)
+                            if (int.Parse(foreignKeyColumn.GetValue(loadedEntity, null).ToString()) > 0)
                             {
-                                var colunaChaveAtributo = obterColunaChave(instanciaAtributo, false);
+                                var keyColumnAttribute = getKeyColumn(attributeInstance, false);
 
-                                var anotacaoChaveAtributo = colunaChaveAtributo.GetCustomAttributes(true)
-                                                            .FirstOrDefault(ca => ca.GetType().Name.Equals("ColunaDados")) as ColunaDados;
+                                var keyAttributeAnnotation = keyColumnAttribute.GetCustomAttributes(true)
+                                                                               .FirstOrDefault(ca => ca.GetType().Name.Equals("DataColumn")) as DataAnnotations.DataColumn;
 
-                                colunaChaveAtributo.SetValue(instanciaAtributo, colunaChaveEstrangeira.GetValue(entidadeCarregada, null), null);
+                                keyColumnAttribute.SetValue(attributeInstance, foreignKeyColumn.GetValue(loadedEntity, null), null);
 
-                                instanciaAtributo = Consultar(instanciaAtributo, instanciaAtributo.GetType(), null, false);
+                                attributeInstance = View(attributeInstance, attributeInstance.GetType(), null, false);
                             }
 
                             break;
-                        case CardinalidadeRelacao.UmParaMuitos :
+                        case RelationCardinality.OneToMuch :
 
-                            instanciaAtributo = Activator.CreateInstance(atributo.PropertyType.GetGenericArguments()[0], true);
+                            attributeInstance = Activator.CreateInstance(attribute.PropertyType.GetGenericArguments()[0], true);
 
-                            colunaChaveEstrangeira = instanciaAtributo.GetType().GetProperty(configRelacao.AtributoChaveEstrangeira);
-                            colunaChaveEstrangeira.SetValue(instanciaAtributo, int.Parse(colunaChavePrimaria.GetValue(entidadeCarregada, null).ToString()), null);
+                            foreignKeyColumn = attributeInstance.GetType().GetProperty(relationConfig.ForeignKeyAttribute);
+                            foreignKeyColumn.SetValue(attributeInstance, int.Parse(primaryKeyColumn.GetValue(loadedEntity, null).ToString()), null);
 
-                            instanciaAtributo = Listar(instanciaAtributo, instanciaAtributo.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
+                            attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
 
                             break;
-                        case CardinalidadeRelacao.MuitosParaMuitos :
+                        case RelationCardinality.MuchToMuch :
 
-                            instanciaAtributo = Activator.CreateInstance(atributo.PropertyType, true);
+                            attributeInstance = Activator.CreateInstance(attribute.PropertyType, true);
 
-                            if (instanciaAtributo != null)
+                            if (attributeInstance != null)
                             {
-                                if (int.Parse(colunaChavePrimaria.GetValue(entidadeCarregada, null).ToString()) > 0)
+                                if (int.Parse(primaryKeyColumn.GetValue(loadedEntity, null).ToString()) > 0)
                                 {
-                                    if (!instanciaAtributo.GetType().Name.Contains("List"))
+                                    if (!attributeInstance.GetType().Name.Contains("List"))
                                     {
-                                        definirChaveHashEntidade(entidadeCarregada, instanciaAtributo);
-                                        replicarHashFilhos(entidadeCarregada, instanciaAtributo);
+                                        setEntityHashKey(loadedEntity, attributeInstance);
+                                        replicateChildHashes(loadedEntity, attributeInstance);
                                     }
                                     else
                                     {
-                                        var instanciaItemFilho = Activator.CreateInstance(atributo.PropertyType.GetGenericArguments()[0], true);
+                                        var childItemInstance = Activator.CreateInstance(attribute.PropertyType.GetGenericArguments()[0], true);
 
-                                        definirChaveHashEntidade(entidadeCarregada, instanciaItemFilho);
-                                        replicarHashFilhos(entidadeCarregada, instanciaItemFilho);
+                                        setEntityHashKey(loadedEntity, childItemInstance);
+                                        replicateChildHashes(loadedEntity, childItemInstance);
 
-                                        instanciaAtributo = Listar(instanciaItemFilho, instanciaItemFilho.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, true, true);
+                                        attributeInstance = List(childItemInstance, childItemInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, true, true);
                                     }
                                 }
                                 else
-                                    instanciaAtributo = Listar(instanciaAtributo, instanciaAtributo.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
+                                    attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
                             }
                             break;
                     }
                 }
 
-                if ((instanciaAtributo != null) && (instanciaAtributo.GetType().Name.Equals(atributo.PropertyType.Name)))
-                    if (!atributo.PropertyType.Name.Contains("List"))
-                        atributo.SetValue(entidadeCarregada, instanciaAtributo, null);
+                if ((attributeInstance != null) && (attributeInstance.GetType().Name.Equals(attribute.PropertyType.Name)))
+                    if (!attribute.PropertyType.Name.Contains("List"))
+                        attribute.SetValue(loadedEntity, attributeInstance, null);
                     else
-                        atributo.SetValue(entidadeCarregada, (IList)instanciaAtributo, null);
+                        attribute.SetValue(loadedEntity, (IList)attributeInstance, null);
             }
         }
 
@@ -1022,10 +1022,10 @@ namespace System.Data.RopSql
             bool notListableAttribute = false;
             string cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
 
-            exibitionAttributes = entityType.GetProperties().
-                                             Where(prp => ((PropertyInfo)prp).GetCustomAttributes(true).
-                                             Where(ca => ((ca is DataAnnotations.DataColumn) || (ca is RelationalColumn))
-                                                      && ((IDataColumn)ca).IsListable()).Any());
+            listableAttributes = entityType.GetProperties().
+                                            Where(prp => ((PropertyInfo)prp).GetCustomAttributes(true).
+                                            Where(ca => ((ca is DataAnnotations.DataColumn) || (ca is RelationalColumn))
+                                                     && ((IDataColumn)ca).IsListable()).Any());
 
             if (showAttributes == string.Empty)
             {
