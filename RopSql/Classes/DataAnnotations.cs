@@ -191,7 +191,7 @@ namespace System.Data.RopSql.DataAnnotations
         Average = 5
     }
 
-    public class ColunaDadosAgregados : Attribute
+    public class DataAggregationColumn : Attribute
     {
         public string ColumnName;
         public string ColumnAlias;
