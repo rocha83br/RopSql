@@ -126,7 +126,7 @@ namespace System.Data.RopSql
             return recordAffected;
 		}
 
-        public object View(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
+        public object Get(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
         {
             object returnEntity = null;
             
@@ -512,7 +512,7 @@ namespace System.Data.RopSql
                 }
 
                 if (genericAttributesId.Count > 0)
-                    attributeInstance = View(attributeInstance, attributeInstance.GetType(), genericAttributesId, true);
+                    attributeInstance = Get(attributeInstance, attributeInstance.GetType(), genericAttributesId, true);
 
                 result = true;
             }
@@ -910,7 +910,7 @@ namespace System.Data.RopSql
 
                                 keyColumnAttribute.SetValue(attributeInstance, foreignKeyColumn.GetValue(loadedEntity, null), null);
 
-                                attributeInstance = View(attributeInstance, attributeInstance.GetType(), null, false);
+                                attributeInstance = Get(attributeInstance, attributeInstance.GetType(), null, false);
                             }
 
                             break;

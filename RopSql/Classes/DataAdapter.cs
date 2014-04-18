@@ -53,9 +53,9 @@ namespace System.Data.RopSql
                 return persistence.Delete(filterEntity, filterEntity.GetType());
             }
 
-            public virtual object View(object filterEntity, bool loadComposition)
+            public virtual object Get(object filterEntity, bool loadComposition)
             {
-                return persistence.View(filterEntity, filterEntity.GetType(), null, loadComposition);
+                return persistence.Get(filterEntity, filterEntity.GetType(), null, loadComposition);
             }
 
             public virtual IList List(object filterEntity, bool loadComposition)
