@@ -9,7 +9,7 @@ using System.Data.RopSql.Interfaces;
 
 namespace System.Data.RopSql
 {
-    public class DataAdapter
+    public class RopSqlDataAdapter
     {
         #region Declarations
 
@@ -20,7 +20,7 @@ namespace System.Data.RopSql
 
         #region Construtors
 
-            public DataAdapter()
+            public RopSqlDataAdapter()
             {
                 if (InstanceCache.Persistence == null)
                 {

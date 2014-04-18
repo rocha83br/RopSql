@@ -418,11 +418,11 @@ namespace System.Data.RopSql
         private string getExclusionComposition(object entity, IList existentComposition)
         {
             List<int> existentKeys = new List<int>();
-            DataAdapter compositionFilter = null;
+            RopSqlDataAdapter compositionFilter = null;
 
             if (existentComposition.Count > 0)
             {
-                compositionFilter = Activator.CreateInstance(existentComposition[0].GetType()) as DataAdapter;
+                compositionFilter = Activator.CreateInstance(existentComposition[0].GetType()) as RopSqlDataAdapter;
                 setEntityHashKey(entity, compositionFilter);
             }
 
