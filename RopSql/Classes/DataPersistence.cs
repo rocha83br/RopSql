@@ -314,7 +314,7 @@ namespace System.Data.RopSql
                 case (int)PersistenceAction.Create:
 
                     sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Create,
-                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["dataTable"],
                                                    sqlParameters["columnList"],
                                                    sqlParameters["valueList"]);
 
@@ -323,17 +323,17 @@ namespace System.Data.RopSql
                 case (int)PersistenceAction.Edit:
 
                     sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Edit,
-                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["dataTable"],
                                                    sqlParameters["columnValueList"],
-                                                   sqlParameters["filterColumnList"]);
+                                                   sqlParameters["columnFilterList"]);
 
                     break;
 
                 case (int)PersistenceAction.Delete:
 
                     sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Delete,
-                                                   sqlParameters["Table"].ToLower(),
-                                                   sqlParameters["filterColumnList"]);
+                                                   sqlParameters["dataTable"],
+                                                   sqlParameters["columnFilterList"]);
 
                     break;
                 default: // Listagem ou Consulta
@@ -341,9 +341,9 @@ namespace System.Data.RopSql
                     sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Query,
                                                    "{0}",
                                                    sqlParameters["columnList"],
-                                                   sqlParameters["Table"].ToLower(),
+                                                   sqlParameters["dataTable"],
                                                    sqlParameters["relationList"],
-                                                   sqlParameters["filterColumnList"],
+                                                   sqlParameters["columnFilterList"],
                                                    "{1}", "{2}", string.Empty);
 
                     break;
@@ -582,9 +582,9 @@ namespace System.Data.RopSql
 
             object[] classAnnotations = entityType.GetCustomAttributes(true);
 
-            var tableAnnotation = classAnnotations.FirstOrDefault(ant => ant.GetType().Name.Equals("Table"));
+            var tableAnnotation = classAnnotations.FirstOrDefault(ant => ant.GetType().Name.Equals("DataTable"));
             if (tableAnnotation != null)
-                objectSQLDataRelation.Add("Table", ((DataAnnotations.DataTable)tableAnnotation).TableName.ToLower());
+                objectSQLDataRelation.Add("dataTable", ((DataAnnotations.DataTable)tableAnnotation).TableName.ToLower());
 
             PropertyInfo primaryKeyAttribute = getKeyColumn(entity, false);
 
