@@ -126,11 +126,11 @@ namespace System.Data.RopSql
             return recordAffected;
 		}
 
-        public T Get<T>(object filterEntity, List<int> primaryKeyFilters, bool loadComposition)
+        public object Get(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
         {
-            T returnEntity = default(T);
+            object returnEntity = null;
             
-            var queryList = List<T>(filterEntity, primaryKeyFilters, 0, 
+            var queryList = List(filterEntity, entityType, primaryKeyFilters, 0, 
                                        string.Empty, string.Empty, string.Empty, 
                                        false, false, false, true, loadComposition);
 
@@ -139,9 +139,8 @@ namespace System.Data.RopSql
             return returnEntity;
 		}
 
-        public List<T> List<T>(object filterEntity, List<int> primaryKeyFilters, int recordLimit, string showAttributes, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
+        public IList List(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
         {
-            var entityType = typeof(T);
             string sqlInstruction = string.Empty;
             string[] displayAttributes = new string[0];
             string[] groupingAttributes = new string[0];
@@ -235,7 +234,7 @@ namespace System.Data.RopSql
 
                 XmlDocument queryReturn = base.executeQuery(sqlInstruction);
 
-                returnList = parseDatabaseReturn<T>(queryReturn, filterEntity.GetType());
+                returnList = parseDatabaseReturn(queryReturn, filterEntity.GetType());
             }
 
             if(!keepConnection) base.disconnect();
@@ -244,9 +243,9 @@ namespace System.Data.RopSql
 
             if (loadComposition && (((IList)returnList).Count > 0))
                 for (int inC = 0; inC < ((IList)returnList).Count; inC++)
-                    fillComposition<T>(((IList)returnList)[inC], ((IList)returnList)[inC].GetType());
+                    fillComposition(((IList)returnList)[inC], ((IList)returnList)[inC].GetType());
 
-            return returnList as List<T>;
+            return (IList)returnList;
 		}
 
         public void DefineSearchFilter(object entity, string filter)
@@ -481,7 +480,7 @@ namespace System.Data.RopSql
             return result;
         }
 
-        private bool replicateChildHashes<T>(object loadedEntity, object attributeInstance)
+        private bool replicateChildHashes(object loadedEntity, object attributeInstance)
         {
             bool result = false;
             List<int> genericAttributesId = null;
@@ -498,7 +497,7 @@ namespace System.Data.RopSql
 
                 setEntityHashKey(loadedEntity, genericAttributeInstance);
 
-                var genericAttributes = List<T>(genericAttributeInstance, null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
+                var genericAttributes = List(genericAttributeInstance, genericAttributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
 
                 genericAttributesId = new List<int>();
 
@@ -513,7 +512,7 @@ namespace System.Data.RopSql
                 }
 
                 if (genericAttributesId.Count > 0)
-                    attributeInstance = Get<T>(attributeInstance, genericAttributesId, true);
+                    attributeInstance = Get(attributeInstance, attributeInstance.GetType(), genericAttributesId, true);
 
                 result = true;
             }
@@ -539,7 +538,7 @@ namespace System.Data.RopSql
                     ? (int)PersistenceAction.Create : (int)PersistenceAction.Edit;
         }
 
-        private List<T> parseDatabaseReturn<T>(XmlDocument databaseReturn, Type entityType)
+        private IList parseDatabaseReturn(XmlDocument databaseReturn, Type entityType)
         {
             Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
             object returnList = Activator.CreateInstance(dynamicListType, true);
@@ -571,7 +570,7 @@ namespace System.Data.RopSql
                 ((IList)returnList).Add(returnEntity);
             }
 
-            return returnList as List<T>;
+            return (IList)returnList;
         }
 
         private Dictionary<object, object> getAnnotationValueList(object entity, Type entityType, int action, List<int> primaryKeyFilters, out Dictionary<object, object> commandParameters)
@@ -872,7 +871,7 @@ namespace System.Data.RopSql
             return returnDictionary;
         }
 
-        public void fillComposition<T>(object loadedEntity, Type entityType)
+        public void fillComposition(object loadedEntity, Type entityType)
         {
             RelatedEntity relationConfig = null;
             object attributeInstance = null;
@@ -911,7 +910,7 @@ namespace System.Data.RopSql
 
                                 keyColumnAttribute.SetValue(attributeInstance, foreignKeyColumn.GetValue(loadedEntity, null), null);
 
-                                attributeInstance = Get<T>(attributeInstance, null, false);
+                                attributeInstance = Get(attributeInstance, attributeInstance.GetType(), null, false);
                             }
 
                             break;
@@ -922,7 +921,7 @@ namespace System.Data.RopSql
                             foreignKeyColumn = attributeInstance.GetType().GetProperty(relationConfig.ForeignKeyAttribute);
                             foreignKeyColumn.SetValue(attributeInstance, int.Parse(primaryKeyColumn.GetValue(loadedEntity, null).ToString()), null);
 
-                            attributeInstance = List<T>(attributeInstance, null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
+                            attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
 
                             break;
                         case RelationCardinality.MuchToMuch :
@@ -936,20 +935,20 @@ namespace System.Data.RopSql
                                     if (!attributeInstance.GetType().Name.Contains("List"))
                                     {
                                         setEntityHashKey(loadedEntity, attributeInstance);
-                                        replicateChildHashes<T>(loadedEntity, attributeInstance);
+                                        replicateChildHashes(loadedEntity, attributeInstance);
                                     }
                                     else
                                     {
                                         var childItemInstance = Activator.CreateInstance(attribute.PropertyType.GetGenericArguments()[0], true);
 
                                         setEntityHashKey(loadedEntity, childItemInstance);
-                                        replicateChildHashes<T>(loadedEntity, childItemInstance);
+                                        replicateChildHashes(loadedEntity, childItemInstance);
 
-                                        attributeInstance = List<T>(childItemInstance, null, 0, string.Empty, string.Empty, string.Empty, false, false, false, true, true);
+                                        attributeInstance = List(childItemInstance, childItemInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, true, true);
                                     }
                                 }
                                 else
-                                    attributeInstance = List<T>(attributeInstance, null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
+                                    attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
                             }
                             break;
                     }

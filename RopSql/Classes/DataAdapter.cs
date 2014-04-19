@@ -54,64 +54,64 @@ namespace System.Data.RopSql
                 return persistence.Delete(filterEntity, filterEntity.GetType());
             }
 
-            public virtual T Get<T>(object filterEntity, bool loadComposition)
+            public virtual object Get(object filterEntity, bool loadComposition)
             {
-                return persistence.Get<T>(filterEntity, null, loadComposition);
+                return persistence.Get(filterEntity, filterEntity.GetType(), null, loadComposition);
             }
 
-            public virtual List<T> List<T>(object filterEntity, bool loadComposition)
+            public virtual IList List(object filterEntity, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+            }
+                            
+            public IList List(object filterEntity, bool onlyListables, bool loadComposition)
+            {
+                return persistence.List(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, bool onlyListables, bool loadComposition)
+            public IList List(object filterEntity, int recordLimit, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, 0, string.Empty, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, recordLimit, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, int recordLimit, bool loadComposition)
+            public IList List(object filterEntity, List<int> primaryKeyFilters, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, recordLimit, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), primaryKeyFilters, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, List<int> primaryKeyFilters, bool loadComposition)
+            public IList List(object filterEntity, List<int> primaryKeyFilters, bool getExclusion, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, primaryKeyFilters, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), primaryKeyFilters, 0, string.Empty, string.Empty, string.Empty, false, getExclusion, false, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, List<int> primaryKeyFilters, bool getExclusion, bool loadComposition)
+            public IList List(object filterEntity, bool onlyListables, int recordLimit, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, primaryKeyFilters, 0, string.Empty, string.Empty, string.Empty, false, getExclusion, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, recordLimit, string.Empty, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, bool onlyListables, int recordLimit, bool loadComposition)
+            public IList List(object filterEntity, string groupAttributes, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, recordLimit, string.Empty, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, 0, string.Empty, groupAttributes, string.Empty, false, false, false, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, string groupAttributes, bool loadComposition)
+            public IList List(object filterEntity, string orderAttributes, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, 0, string.Empty, groupAttributes, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, string orderAttributes, bool orderDescending, bool loadComposition)
+            public IList List(object filterEntity, string groupAttributes, string orderAttributes, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, 0, string.Empty, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, string groupAttributes, string orderAttributes, bool orderDescending, bool loadComposition)
+            public IList List(object filterEntity, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, 0, string.Empty, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, 0, string.Empty, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
-            public List<T> List<T>(object filterEntity, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
+            public IList List(object filterEntity, string showAttributes, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, null, 0, string.Empty, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
-            }
-
-            public List<T> List<T>(object filterEntity, string showAttributes, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
-            {
-                return persistence.List<T>(filterEntity, null, recordLimit, showAttributes, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List(filterEntity, filterEntity.GetType(), null, recordLimit, showAttributes, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
             public void DefineSearchFilter(object entity, string filter)
