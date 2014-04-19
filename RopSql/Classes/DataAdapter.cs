@@ -24,11 +24,12 @@ namespace System.Data.RopSql
             {
                 if (InstanceCache.Persistence == null)
                 {
-                    dataLayerPath = string.Concat(ConfigurationManager.AppSettings["RopSqlBinPath"], "RopSql.dll");
+                    //dataLayerPath = string.Concat(ConfigurationManager.AppSettings["RopSqlBinPath"], "RopSql.dll");
                     
-                    persistence = (IPersistence)Activator.CreateInstanceFrom(dataLayerPath,
-                                                                             "System.Data.RopSql.DataPersistence").Unwrap();
-                    InstanceCache.Persistence = persistence;
+                    //persistence = (IPersistence)Activator.CreateInstanceFrom(dataLayerPath,
+                    //                                                         "System.Data.RopSql.DataPersistence").Unwrap();
+                    
+                    InstanceCache.Persistence = new DataPersistence();
                 }
                 else
                     persistence = (IPersistence)InstanceCache.Persistence;
@@ -122,9 +123,10 @@ namespace System.Data.RopSql
             {
                 if (InstanceCache.Persistence == null)
                 {
-                    persistence = (IPersistence)Activator.CreateInstanceFrom(dataLayerPath,
-                                                                             "System.Data.RopSql.DataPersistence", new object[] { true }).Unwrap();
-                    InstanceCache.Persistence = persistence;
+                    //persistence = (IPersistence)Activator.CreateInstanceFrom(dataLayerPath,
+                    //                                                         "System.Data.RopSql.DataPersistence", new object[] { true }).Unwrap();
+                    
+                    InstanceCache.Persistence = new DataPersistence();
                 }
                 else
                     persistence = (IPersistence)InstanceCache.Persistence;
