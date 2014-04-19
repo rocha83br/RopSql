@@ -661,7 +661,7 @@ namespace System.Data.RopSql
             {
                 relation = string.Empty;
 
-                if (item.Key.Equals("Table"))
+                if (item.Key.Equals("dataTable"))
                 {
                     returnDictionary.Add(item.Key.ToString(), item.Value.ToString());
                     tableName = item.Value.ToString().ToLower();
@@ -767,7 +767,7 @@ namespace System.Data.RopSql
             {
                 foreach (var filter in entitySqlFilter)
                 {
-                    if ((!filter.Key.Equals("Class")) && (!filter.Key.Equals("Table"))
+                    if ((!filter.Key.Equals("Class")) && (!filter.Key.Equals("dataTable"))
                         && (!filter.Key.Equals("RelatedEntity")))
                     {
                         object filterColumnName = null;
