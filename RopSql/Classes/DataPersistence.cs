@@ -13,7 +13,7 @@ using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
-    public class DataPersistence : DataBaseOleDbConnection, IPersistence
+    public class DataPersistence : DataBaseODBCConnection, IPersistence
     {
         #region Declarations
 

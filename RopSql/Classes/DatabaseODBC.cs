@@ -129,7 +129,7 @@ namespace System.Data.RopSql
                 return executionReturn;
             }
 
-            protected XmlDocument executeSearch(string sqlInstruction)
+            protected XmlDocument executeQuery(string sqlInstruction)
             {
                 OdbcCommand sqlCommand = null;
                 OdbcDataAdapter sqlAdapter = null;
