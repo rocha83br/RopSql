@@ -31,8 +31,8 @@ namespace System.Data.RopSql
                     
                     InstanceCache.Persistence = new DataPersistence();
                 }
-                else
-                    persistence = (IPersistence)InstanceCache.Persistence;
+                
+                persistence = (IPersistence)InstanceCache.Persistence;
             }
 
         #endregion
@@ -127,9 +127,10 @@ namespace System.Data.RopSql
                     //                                                         "System.Data.RopSql.DataPersistence", new object[] { true }).Unwrap();
                     
                     InstanceCache.Persistence = new DataPersistence();
+                    
                 }
-                else
-                    persistence = (IPersistence)InstanceCache.Persistence;
+                
+                persistence = (IPersistence)InstanceCache.Persistence;
 
                 persistence.StartTransaction();
             }
