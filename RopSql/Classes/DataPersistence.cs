@@ -829,6 +829,11 @@ namespace System.Data.RopSql
                                 }
                             }
 
+                            if (filterColumnValue.Equals(true))
+                                comparation = " = 1";
+                            else if (filterColumnValue.Equals(false))
+                                comparation = "= 0";
+
                             columnFilterList += filterColumnName + comparation +
                                 ((action == (int)PersistenceAction.List) ? SqlOperator.Or : SqlOperator.And);
                         }
