@@ -835,8 +835,7 @@ namespace System.Data.RopSql
                             if ((action == (int)PersistenceAction.Edit) && filterColumnValue.Equals(false))
                                 comparation = " = 0";
 
-                            if (!((action == (int)PersistenceAction.List) || (action == (int)PersistenceAction.Delete)) 
-                                && !filterColumnValue.Equals(false))
+                            if (!(filterColumnName.ToString().EndsWith(".Active") && filterColumnValue.Equals(false)))
                                 columnFilterList += filterColumnName + comparation +
                                     ((action == (int)PersistenceAction.List) ? SqlOperator.Or : SqlOperator.And);
                         }
