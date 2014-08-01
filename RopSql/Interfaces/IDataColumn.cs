@@ -12,6 +12,8 @@ namespace System.Data.RopSql.Interfaces
         bool IsListable();
         bool IsFilterable();
         bool IsListLabel();
+        bool IsHashSignature();
+        bool IsHashId();
         string GetColumnName();
     }
 }

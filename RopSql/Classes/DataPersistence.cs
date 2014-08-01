@@ -314,7 +314,15 @@ namespace System.Data.RopSql
                                        .FirstOrDefault(cln => cln is HashSignature) as HashSignature;
             var hashCode = entityHash != null ? entityHash.HashCode : 0;
 
-            Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData, showAttributes, keyColumnName, hashCode, (primaryKeyFilters != null), getExclusion);
+            var hashColumn = entityType.GetProperties().FirstOrDefault(prp => prp.GetCustomAttributes(true)
+                                                       .Any(an => an.GetType().GetInterface("IDataColumn") != null)
+                                                            && ((IDataColumn)(prp.GetCustomAttributes(true)
+                                                       .FirstOrDefault(an => an.GetType().GetInterface("IDataColumn") != null))).IsHashSignature());
+
+            Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData,
+                                                                        showAttributes, keyColumnName, hashCode, 
+                                                                        (hashColumn != null) ? hashColumn.Name : string.Empty, 
+                                                                        (primaryKeyFilters != null), getExclusion);
 
             switch(action)
             {
@@ -457,8 +465,11 @@ namespace System.Data.RopSql
 
             if (entityKeyColumn != null)
             {
-                var referenceId = getKeyColumn(childEntity, true);
-
+                var referenceId = childEntity.GetType().GetProperties()
+                                             .FirstOrDefault(prp => prp.GetCustomAttributes(true)
+                                             .Any(an => an.GetType().GetInterface("IDataColumn") != null)
+                                                  && ((IDataColumn)(prp.GetCustomAttributes(true)
+                                             .FirstOrDefault(an => an.GetType().GetInterface("IDataColumn") != null))).IsHashId());
                 if (referenceId != null)
                 {
                     referenceId.SetValue(childEntity, entityKeyColumn.GetValue(parentEntity, null), null);
@@ -469,7 +480,10 @@ namespace System.Data.RopSql
             }
 
             var entityHashColumn = childEntity.GetType().GetProperties()
-                                                        .FirstOrDefault(fd => fd.Name.Equals("ReferenceTypeHash"));
+                                              .FirstOrDefault(prp => prp.GetCustomAttributes(true)
+                                              .Any(an => an.GetType().GetInterface("IDataColumn") != null)
+                                                   && ((IDataColumn)(prp.GetCustomAttributes(true)
+                                              .FirstOrDefault(an => an.GetType().GetInterface("IDataColumn") != null))).IsHashSignature());
 
             if (entityHashColumn != null)
             {
@@ -495,7 +509,7 @@ namespace System.Data.RopSql
             var genericAttributeFilter = attributeInstance.GetType()
                                                           .GetProperties()
                                                           .FirstOrDefault(atb => atb.PropertyType
-                                                          .GetInterface("IReferenceTypeHash") != null);
+                                                          .GetInterface("IEntityHash") != null);
 
             if (genericAttributeFilter != null)
             {
@@ -651,7 +665,7 @@ namespace System.Data.RopSql
             return objectSQLDataRelation;
         }
 
-        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, bool multipleFilters, bool getExclusion)
+        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, string hashColumnName, bool multipleFilters, bool getExclusion)
         {
             var returnDictionary = new Dictionary<string, string>();
             var relationshipDictionary = new Dictionary<string, string>();
@@ -708,7 +722,7 @@ namespace System.Data.RopSql
                                                       string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn));
 
                             if (relationConfig.ConnectHash)
-                                relation += string.Format(" AND NR_HASH_REFERENCIA = {0} ", entityHash);
+                                relation += string.Format(" AND {0} = {1} ", hashColumnName, entityHash);
                         }
                         else
                         {

@@ -28,6 +28,8 @@ namespace System.Data.RopSql.DataAnnotations
         public bool Filterable;
         public bool MultipleFilters;
         public bool ListLabel;
+        public bool HashSignature;
+        public bool HashId;
         public string ColumnName;
 
         public bool IsPrimaryKey()
@@ -63,6 +65,16 @@ namespace System.Data.RopSql.DataAnnotations
         public bool IsListLabel()
         {
             return ListLabel;
+        }
+
+        public bool IsHashSignature()
+        {
+            return HashSignature;
+        }
+
+        public bool IsHashId()
+        {
+            return HashId;
         }
 
         public string GetColumnName()
@@ -172,6 +184,16 @@ namespace System.Data.RopSql.DataAnnotations
         public bool IsListLabel()
         {
             return ListLabel;
+        }
+
+        public bool IsHashSignature()
+        {
+            return false;
+        }
+
+        public bool IsHashId()
+        {
+            return false;
         }
 
         public string GetColumnName()
