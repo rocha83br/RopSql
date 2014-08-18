@@ -433,11 +433,11 @@ namespace System.Data.RopSql
         private string getExclusionComposition(object entity, IList existentComposition)
         {
             List<int> existentKeys = new List<int>();
-            RopSqlDataAdapter compositionFilter = null;
+            object compositionFilter = null;
 
             if (existentComposition.Count > 0)
             {
-                compositionFilter = Activator.CreateInstance(existentComposition[0].GetType()) as RopSqlDataAdapter;
+                compositionFilter = Activator.CreateInstance(existentComposition[0].GetType());
                 setEntityHashKey(entity, compositionFilter);
             }
 
@@ -641,8 +641,8 @@ namespace System.Data.RopSql
                                 {
                                     string keysInterval = string.Empty;
 
-                                    foreach (var filtroChave in primaryKeyFilters)
-                                        keysInterval += string.Concat(filtroChave.ToString(), ",");
+                                    foreach (var filterKey in primaryKeyFilters)
+                                        keysInterval += string.Concat(filterKey.ToString(), ",");
 
                                     sqlValueColumn = new KeyValuePair<object, object>(
                                                     (annotationRef).ColumnName,
@@ -816,10 +816,16 @@ namespace System.Data.RopSql
                                 && (filterColumnValue.ToString() != SqlDefaultValue.Null)
                                 && (filterColumnValue.ToString() != SqlDefaultValue.Zero))
                         {
+                            bool compareRule = (action == (int)PersistenceAction.List)
+                                                   && !filterColumnName.ToString().ToLower().Contains("date")
+                                                   && !filterColumnName.ToString().ToLower().Contains("hash")
+                                                   && !filterColumnName.ToString().ToLower().StartsWith("id")
+                                                   && !filterColumnName.ToString().ToLower().EndsWith("id");
+
                             string comparation = string.Empty;
 
                             if (!multipleFilters)
-                                comparation = ((action == (int)PersistenceAction.List) && !filterColumnName.ToString().Contains("DT_"))
+                                comparation = (compareRule)
                                               ? string.Format(SqlOperator.Contains, filterColumnValue.ToString().Replace("'", string.Empty))
                                               : string.Concat(SqlOperator.Equal, filterColumnValue);
                             else
@@ -851,7 +857,7 @@ namespace System.Data.RopSql
 
                             if (!(filterColumnName.ToString().EndsWith(".Active") && filterColumnValue.Equals(false)))
                                 columnFilterList += filterColumnName + comparation +
-                                    ((action == (int)PersistenceAction.List) ? SqlOperator.Or : SqlOperator.And);
+                                    ((compareRule) ? SqlOperator.Or : SqlOperator.And);
                         }
                     }
                 }
@@ -942,17 +948,20 @@ namespace System.Data.RopSql
                             }
 
                             break;
-                        case RelationCardinality.OneToMuch :
+                        case RelationCardinality.OneToMany :
 
                             attributeInstance = Activator.CreateInstance(attribute.PropertyType.GetGenericArguments()[0], true);
 
                             foreignKeyColumn = attributeInstance.GetType().GetProperty(relationConfig.ForeignKeyAttribute);
                             foreignKeyColumn.SetValue(attributeInstance, int.Parse(primaryKeyColumn.GetValue(loadedEntity, null).ToString()), null);
 
+                            if (relationConfig.HashSigned)
+                                setEntityHashKey(loadedEntity, attributeInstance);
+
                             attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
 
                             break;
-                        case RelationCardinality.MuchToMuch :
+                        case RelationCardinality.ManyToMany :
 
                             attributeInstance = Activator.CreateInstance(attribute.PropertyType, true);
 

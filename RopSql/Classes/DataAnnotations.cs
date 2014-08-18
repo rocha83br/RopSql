@@ -223,13 +223,14 @@ namespace System.Data.RopSql.DataAnnotations
     public enum RelationCardinality
     {
         OneToOne = 1,
-        OneToMuch = 2,
-        MuchToMuch = 3
+        OneToMany = 2,
+        ManyToMany = 3
     }
 
     public class RelatedEntity : Attribute 
     {
-        public RelationCardinality Cardinality; 
+        public RelationCardinality Cardinality;
+        public bool HashSigned;
         public string ForeignKeyAttribute;
         public bool RecordableComposition = false;
     }
