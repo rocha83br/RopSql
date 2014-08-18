@@ -832,7 +832,7 @@ namespace System.Data.RopSql
                             {
                                 if (filterColumnValue.ToString().Contains(','))
                                 {
-                                    comparation = string.Format(SqlOperator.And, filterColumnValue);
+                                    comparation = string.Format(SqlOperator.In, filterColumnValue);
                                     if (getExclusion) comparation = string.Concat(SqlOperator.Not, comparation);
                                 }
                                 else
