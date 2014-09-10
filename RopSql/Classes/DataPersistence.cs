@@ -393,6 +393,8 @@ namespace System.Data.RopSql
                         if (action == (int)PersistenceAction.Edit)
                             migrateEntityPrimaryKey(childEntityInstance, childEntityFilter);
 
+                        setEntityForeignKey(entityParent, child);
+
                         setEntityHashKey(entityParent, child);
 
                         result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
@@ -412,6 +414,8 @@ namespace System.Data.RopSql
                                 migrateEntityPrimaryKey(listItem, childEntityFilter);
                                 childFiltersList.Add(childEntityFilter);
                             }
+
+                            setEntityForeignKey(entityParent, listItem);
 
                             setEntityHashKey(entityParent, listItem);
 
@@ -454,6 +458,15 @@ namespace System.Data.RopSql
                 result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, out commandParameters);
 
             return result;
+        }
+
+        private void setEntityForeignKey(object parentEntity, object childEntity)
+        {
+            var parentKey = getKeyColumn(parentEntity, false);
+            var childForeignKey = getKeyColumn(childEntity, true, parentEntity.GetType().Name);
+
+            if ((parentKey != null) && (childForeignKey != null))
+                childForeignKey.SetValue(childEntity, parentKey.GetValue(parentEntity, null), null);
         }
 
         private bool setEntityHashKey(object parentEntity, object childEntity)
@@ -547,8 +560,8 @@ namespace System.Data.RopSql
 
             if (entityKeyColumn != null)
             {
-                var valorChave = entityKeyColumn.GetValue(entity, null);
-                entityKeyColumn.SetValue(filterEntity, valorChave, null);
+                var keyValue = entityKeyColumn.GetValue(entity, null);
+                entityKeyColumn.SetValue(filterEntity, keyValue, null);
                 entityKeyColumn.SetValue(entity, 0, null);
             }
         }
@@ -1087,7 +1100,7 @@ namespace System.Data.RopSql
             }
         }
 
-        private PropertyInfo getKeyColumn(object entity, bool foreignKey)
+        private PropertyInfo getKeyColumn(object entity, bool foreignKey, string parentName = "")
         {
             PropertyInfo entityKeyColumn = null;
 
@@ -1097,10 +1110,11 @@ namespace System.Data.RopSql
                                                    (ca.GetType().Name.Equals("DataColumn")
                                                     && ((DataAnnotations.DataColumn)ca).IsPrimaryKey()))));
             else
-                entityKeyColumn = entity.GetType().GetProperties().LastOrDefault(fd =>
-                                                   (fd.GetCustomAttributes(true).Any(ca =>
+                entityKeyColumn = entity.GetType().GetProperties().FirstOrDefault(fd => 
+                                                   fd.Name.Contains(parentName) 
+                                                   && (fd.GetCustomAttributes(true).Any(ca =>
                                                    (ca.GetType().Name.Equals("DataColumn")
-                                                       && ((DataAnnotations.DataColumn)ca).IsPrimaryKey()))));
+                                                    && ((DataAnnotations.DataColumn)ca).IsForeignKey()))));
 
             return entityKeyColumn;
         }
