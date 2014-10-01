@@ -374,10 +374,13 @@ namespace System.Data.RopSql
             Dictionary<object, object> commandParameters;
 
             IEnumerable<PropertyInfo> childEntities = entityType.GetProperties().Where(prp => prp.GetCustomAttributes(true)
-                                                                                .Any(an => an.GetType().Name.Equals("RelatedEntity")));
+                                                                                .Any(atb => atb.GetType().Name.Equals("RelatedEntity")));
 
             foreach (PropertyInfo child in childEntities)
             {
+                var relationAttrib = child.GetCustomAttributes(true)
+                                          .FirstOrDefault(atb => atb.GetType().Name.Equals("RelatedEntity")) as RelatedEntity;
+
                 childEntityInstance = child.GetValue(entity, null);
                 object childEntityFilter = null;
 
@@ -409,20 +412,27 @@ namespace System.Data.RopSql
                             action = setPersistenceAction(listItem, getKeyColumn(listItem, false));
                             childEntityFilter = Activator.CreateInstance(listItem.GetType());
 
-                            if (action == (int)PersistenceAction.Edit)
+                            if (relationAttrib.Cardinality == RelationCardinality.OneToMany)
                             {
-                                migrateEntityPrimaryKey(listItem, childEntityFilter);
-                                childFiltersList.Add(childEntityFilter);
-                            }
+                                if (action == (int)PersistenceAction.Edit)
+                                {
+                                    migrateEntityPrimaryKey(listItem, childEntityFilter);
+                                    childFiltersList.Add(childEntityFilter);
+                                }
 
-                            setEntityForeignKey(entityParent, listItem);
+                                setEntityForeignKey(entityParent, listItem);
+                            }
+                            else
+                            {
+                                // TODO: Create many to many association logic
+                            }
 
                             setEntityHashKey(entityParent, listItem);
 
                             result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
                         }
 
-                        if (childFiltersList.Count > 0)
+                        if ((childFiltersList.Count > 0) && (relationAttrib.Cardinality == RelationCardinality.OneToMany))
                             result.Add(getExclusionComposition(filterEntity, childFiltersList));
                     }
                 }
