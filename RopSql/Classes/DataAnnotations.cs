@@ -14,6 +14,7 @@ namespace System.Data.RopSql.DataAnnotations
     public class DataTable : Attribute
     {
         public string TableName;
+        public bool Cacheable;
     }
 
     public class DataColumn : Attribute, IDataColumn
@@ -227,12 +228,29 @@ namespace System.Data.RopSql.DataAnnotations
         ManyToMany = 3
     }
 
-    public class RelatedEntity : Attribute 
+    public class RelatedEntity : Attribute, IRelatedEntity 
     {
         public RelationCardinality Cardinality;
         public bool HashSigned;
         public string ForeignKeyAttribute;
+        public Type IntermediaryEntity;
+        public string IntermediaryKeyAttribute;
         public bool RecordableComposition = false;
+
+        public RelationCardinality GetRelationCardinality()
+        {
+            return Cardinality;
+        }
+
+        public Type GetIntermediaryEntity()
+        {
+            return IntermediaryEntity;
+        }
+
+        public string GetIntermediaryKeyAttribute()
+        {
+            return IntermediaryKeyAttribute;
+        }
     }
 
     public class AttributeFormat : Attribute
