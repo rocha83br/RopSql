@@ -409,11 +409,12 @@ namespace System.Data.RopSql
 
                         foreach (var listItem in childListInstance)
                         {
-                            action = setPersistenceAction(listItem, getKeyColumn(listItem, false));
-                            childEntityFilter = Activator.CreateInstance(listItem.GetType());
-
                             if (relationAttrib.Cardinality == RelationCardinality.OneToMany)
                             {
+                                childEntityFilter = Activator.CreateInstance(listItem.GetType());
+
+                                action = setPersistenceAction(listItem, getKeyColumn(listItem, false));
+
                                 if (action == (int)PersistenceAction.Edit)
                                 {
                                     migrateEntityPrimaryKey(listItem, childEntityFilter);
@@ -421,15 +422,26 @@ namespace System.Data.RopSql
                                 }
 
                                 setEntityForeignKey(entityParent, listItem);
+                                setEntityHashKey(entityParent, listItem);
+
+                                result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
                             }
                             else
                             {
-                                // TODO: Create many to many association logic
+                                var manyToEntity = parseManyToRelation(listItem, relationAttrib);
+
+                                setEntityForeignKey(entityParent, manyToEntity);
+                                setEntityHashKey(entityParent, manyToEntity);
+
+                                var existRelation = this.Get(manyToEntity, manyToEntity.GetType(), null, false);
+
+                                if (existRelation != null) manyToEntity = existRelation;
+
+                                // TODO: Revisar como obter action
+                                action = setPersistenceAction(manyToEntity, getKeyColumn(listItem, false));
+
+                                result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), (int)PersistenceAction.Create, manyToEntity, null, false, null, out commandParameters));
                             }
-
-                            setEntityHashKey(entityParent, listItem);
-
-                            result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
                         }
 
                         if ((childFiltersList.Count > 0) && (relationAttrib.Cardinality == RelationCardinality.OneToMany))
@@ -1127,6 +1139,27 @@ namespace System.Data.RopSql
                                                     && ((DataAnnotations.DataColumn)ca).IsForeignKey()))));
 
             return entityKeyColumn;
+        }
+
+        private object parseManyToRelation(object childEntity, RelatedEntity relation)
+        {
+            object result = null;
+            var relEntity = relation.IntermediaryEntity;
+
+            if (relEntity != null)
+            {
+                var interEntity = Activator.CreateInstance(relation.IntermediaryEntity);
+
+                var childKey = getKeyColumn(childEntity, false);
+                var interKeyAttrib = interEntity.GetType().GetProperties()
+                                                .FirstOrDefault(atb => atb.Name.Equals(relation.IntermediaryKeyAttribute));
+
+                interKeyAttrib.SetValue(interEntity, childKey.GetValue(childEntity, null), null);
+
+                result = interEntity;
+            }
+
+            return result;
         }
 
         #endregion
