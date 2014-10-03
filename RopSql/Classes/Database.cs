@@ -18,7 +18,7 @@ namespace System.Data.RopSql
         readonly string connectionConfig;
         readonly string cultureAcronym;
 
-        private readonly SqlConnection connection;
+        protected readonly SqlConnection connection;
         SqlTransaction transactionControl;
 
         #endregion

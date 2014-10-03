@@ -29,7 +29,7 @@ namespace System.Data.RopSql
         public DataPersistence(bool keepDBConnected)
         {
             keepConnection = keepDBConnected;
-            base.connect();
+            if (keepConnection) base.connect();
         }
 
         #endregion
@@ -64,6 +64,9 @@ namespace System.Data.RopSql
 
                     childEntityCommands = parseComposition(entity, entityType, (int)PersistenceAction.Create, null);
 
+                    if (base.connection.State == ConnectionState.Closed)
+                        base.connect();
+
                     foreach (var cmd in childEntityCommands)
                         executeCommand(cmd, commandParameters);
                 }
@@ -93,6 +96,9 @@ namespace System.Data.RopSql
             if (persistComposition)
             {
                 childEntityCommands = parseComposition(entity, entityType, (int)PersistenceAction.Edit, filterEntity);
+
+                if (base.connection.State == ConnectionState.Closed)
+                    base.connect();
 
                 foreach (var cmd in childEntityCommands)
                     recordsAffected += executeCommand(cmd, commandParameters);
@@ -432,13 +438,12 @@ namespace System.Data.RopSql
 
                                 setEntityForeignKey(entityParent, manyToEntity);
                                 setEntityHashKey(entityParent, manyToEntity);
-
+   
                                 var existRelation = this.Get(manyToEntity, manyToEntity.GetType(), null, false);
 
                                 if (existRelation != null) manyToEntity = existRelation;
 
-                                // TODO: Revisar como obter action
-                                action = setPersistenceAction(manyToEntity, getKeyColumn(listItem, false));
+                                action = setPersistenceAction(manyToEntity, getKeyColumn(manyToEntity, false));
 
                                 result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), (int)PersistenceAction.Create, manyToEntity, null, false, null, out commandParameters));
                             }
