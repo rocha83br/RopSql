@@ -445,7 +445,14 @@ namespace System.Data.RopSql
 
                                 action = setPersistenceAction(manyToEntity, getKeyColumn(manyToEntity, false));
 
-                                result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), (int)PersistenceAction.Create, manyToEntity, null, false, null, out commandParameters));
+                                object existFilter = null;
+                                if (action == (int)PersistenceAction.Edit)
+                                {
+                                    existFilter = Activator.CreateInstance(manyToEntity.GetType());
+                                    migrateEntityPrimaryKey(manyToEntity, existFilter);
+                                }
+
+                                result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, out commandParameters));
                             }
                         }
 
