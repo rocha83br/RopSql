@@ -396,7 +396,7 @@ namespace System.Data.RopSql
                 {
                     if (!childEntityInstance.GetType().Name.Contains("List"))
                     {
-                        action = setPersistenceAction(childEntityInstance, getKeyColumn(filterEntity, false));
+                        action = setPersistenceAction(childEntityInstance, getKeyColumn(childEntityInstance, false));
                         childEntityFilter = Activator.CreateInstance(childEntityInstance.GetType());
 
                         if (action == (int)PersistenceAction.Edit)
@@ -1010,29 +1010,29 @@ namespace System.Data.RopSql
                             break;
                         case RelationCardinality.ManyToMany :
 
-                            attributeInstance = Activator.CreateInstance(attribute.PropertyType, true);
+                            attributeInstance = Activator.CreateInstance(relationConfig.IntermediaryEntity, true);
 
                             if (attributeInstance != null)
                             {
-                                if (int.Parse(primaryKeyColumn.GetValue(loadedEntity, null).ToString()) > 0)
-                                {
-                                    if (!attributeInstance.GetType().Name.Contains("List"))
-                                    {
-                                        setEntityHashKey(loadedEntity, attributeInstance);
-                                        replicateChildHashes(loadedEntity, attributeInstance);
-                                    }
-                                    else
-                                    {
-                                        var childItemInstance = Activator.CreateInstance(attribute.PropertyType.GetGenericArguments()[0], true);
+                                setEntityForeignKey(loadedEntity, attributeInstance);
+                                setEntityHashKey(loadedEntity, attributeInstance);
 
-                                        setEntityHashKey(loadedEntity, childItemInstance);
-                                        replicateChildHashes(loadedEntity, childItemInstance);
+                                var manyToRelations = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
 
-                                        attributeInstance = List(childItemInstance, childItemInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, true, true);
-                                    }
+                                Type childManyType = attribute.PropertyType.GetGenericArguments()[0];
+                                Type dynamicManyType = typeof(List<>).MakeGenericType(new Type[] { childManyType });
+                                IList childManyEntities = (IList)Activator.CreateInstance(dynamicManyType, true);
+
+                                foreach(var rel in manyToRelations)
+                                {                                    
+                                    var childManyKeyValue = rel.GetType().GetProperty(relationConfig.IntermediaryKeyAttribute).GetValue(rel, null);
+                                    var childFilter = Activator.CreateInstance(childManyType);
+                                    getKeyColumn(childFilter, false).SetValue(childFilter, childManyKeyValue, null);
+
+                                    childManyEntities.Add(Get(childFilter, childFilter.GetType(), null, false));
                                 }
-                                else
-                                    attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
+
+                                attributeInstance = childManyEntities;
                             }
                             break;
                     }
