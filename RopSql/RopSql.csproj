@@ -50,9 +50,11 @@
     <Compile Include="Classes\DataAdapter.cs" />
     <Compile Include="Classes\Database.cs" />
     <Compile Include="Classes\DatabaseODBC.cs" />
+    <Compile Include="Classes\DataCache.cs" />
     <Compile Include="Classes\Exception.cs" />
     <Compile Include="Classes\Language.cs" />
     <Compile Include="Classes\DataPersistence.cs" />
+    <Compile Include="Classes\Parallelizer.cs" />
     <Compile Include="Interfaces\IDataAdapter.cs" />
     <Compile Include="Interfaces\IDataColumn.cs" />
     <Compile Include="Interfaces\IEntityHash.cs" />

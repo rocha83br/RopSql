@@ -72,6 +72,9 @@ namespace System.Data.RopSql
                 }
                 
                 if (!keepConnection) base.disconnect();
+
+                if (getTableAttrib(entity).Cacheable)
+                    DataCache.Put(getEntityHashCode(entity), entity);
             }
 
             return lastInsertedId;
@@ -316,9 +319,7 @@ namespace System.Data.RopSql
             if (keyColumn != null)
                 keyColumnName = keyColumn.ColumnName;
 
-            var entityHash = entityType.GetCustomAttributes(true)
-                                       .FirstOrDefault(cln => cln is HashSignature) as HashSignature;
-            var hashCode = entityHash != null ? entityHash.HashCode : 0;
+            var hashCode = getEntityHashCode(entity);
 
             var hashColumn = entityType.GetProperties().FirstOrDefault(prp => prp.GetCustomAttributes(true)
                                                        .Any(an => an.GetType().GetInterface("IDataColumn") != null)
@@ -1132,6 +1133,25 @@ namespace System.Data.RopSql
                     if (!notListableAttribute) throw new AttributeNotListableException(cultureAcronym); break;
                 }
             }
+        }
+
+        private long getEntityHashCode(object entity)
+        {
+            long result = 0;
+
+            var hashSignature = entity.GetType().GetCustomAttributes(false)
+                                      .SingleOrDefault(cln => cln is HashSignature) as HashSignature;
+            
+            if (hashSignature != null)
+                result = hashSignature.HashCode;
+
+            return result;
+        }
+
+        private DataAnnotations.DataTable getTableAttrib(object entity)
+        {
+            return entity.GetType().GetCustomAttributes(false)
+                                   .SingleOrDefault(atb => atb is DataAnnotations.DataTable) as DataAnnotations.DataTable;
         }
 
         private PropertyInfo getKeyColumn(object entity, bool foreignKey, string parentName = "")

@@ -23,14 +23,7 @@ namespace System.Data.RopSql
             public RopSqlDataAdapter()
             {
                 if (InstanceCache.Persistence == null)
-                {
-                    //dataLayerPath = string.Concat(ConfigurationManager.AppSettings["RopSqlBinPath"], "RopSql.dll");
-                    
-                    //persistence = (IPersistence)Activator.CreateInstanceFrom(dataLayerPath,
-                    //                                                         "System.Data.RopSql.DataPersistence").Unwrap();
-                    
                     InstanceCache.Persistence = new DataPersistence();
-                }
                 
                 persistence = (IPersistence)InstanceCache.Persistence;
             }
