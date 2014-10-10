@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,40 +8,47 @@ namespace System.Data.RopSql
 {
     public static class DataCache
     {
-        private static Dictionary<long, List<object>> cacheItems = null;
+        #region Declarations
 
-        public static List<object> List(long cacheId)
-        {
-            List<object> result = null;
+        private static Dictionary<object, object> cacheItems = null;
 
-            if (cacheItems[cacheId] != null)
-                return cacheItems[cacheId];
+        #endregion
 
-            return result;
-        }
+        #region Public Methods
 
-        public static object Get(long cacheId, object cacheItem)
+        public static object Get(object cacheKey)
         {
             object result = null;
 
-            if (cacheItems != null)
-                result = cacheItems[cacheId].FirstOrDefault(item => item.Equals(cacheItem));
+            if (cacheItems[cacheKey] != null)
+                return cacheItems[cacheKey];
 
             return result;
         }
 
-        public static void Put(long cacheId, object cacheItem)
+        public static void Put(object cacheKey, object cacheItem)
         {
             if (cacheItem != null)
             {
                 if (cacheItems == null)
-                    cacheItems = new Dictionary<long, List<object>>();
+                    cacheItems = new Dictionary<object, object>();
 
-                if (cacheItems[cacheId] == null)
-                    cacheItems.Add(cacheId, new List<object>());
-
-                cacheItems[cacheId].Add(cacheItem);
+                if (cacheItems[cacheKey] == null)
+                    cacheItems.Add(cacheKey, cacheItem);
             }
         }
+
+        public static void Del(object cacheKey)
+        {
+            if (cacheKey != null)
+                cacheItems.Remove(cacheKey);
+        }
+
+        public static void Clear()
+        {
+            cacheItems = null;
+        }
+
+        #endregion
     }
 }

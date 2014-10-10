@@ -14,7 +14,7 @@ namespace System.Data.RopSql.DataAnnotations
     public class DataTable : Attribute
     {
         public string TableName;
-        public bool Cacheable;
+        public bool IsCacheable;
     }
 
     public class DataColumn : Attribute, IDataColumn

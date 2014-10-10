@@ -58,6 +58,7 @@
     <Compile Include="Interfaces\IDataAdapter.cs" />
     <Compile Include="Interfaces\IDataColumn.cs" />
     <Compile Include="Interfaces\IEntityHash.cs" />
+    <Compile Include="Interfaces\IIdentity.cs" />
     <Compile Include="Interfaces\IPersistence.cs" />
     <Compile Include="Interfaces\IRelatedEntity.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

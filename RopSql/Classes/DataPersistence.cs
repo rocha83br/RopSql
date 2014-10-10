@@ -73,8 +73,12 @@ namespace System.Data.RopSql
                 
                 if (!keepConnection) base.disconnect();
 
-                if (getTableAttrib(entity).Cacheable)
-                    DataCache.Put(getEntityHashCode(entity), entity);
+                if (getTableAttrib(entity).IsCacheable)
+                {
+                    var newCacheKey = Activator.CreateInstance(entityType);
+                    migrateEntityPrimaryKey(entity, newCacheKey);
+                    DataCache.Put(newCacheKey, entity);
+                }
             }
 
             return lastInsertedId;
@@ -109,6 +113,12 @@ namespace System.Data.RopSql
 
             if (!keepConnection) base.disconnect();
 
+            if (getTableAttrib(entity).IsCacheable)
+            {
+                DataCache.Del(filterEntity);
+                DataCache.Put(filterEntity, entity);
+            }
+
             return recordsAffected;
 		}
 
@@ -132,25 +142,39 @@ namespace System.Data.RopSql
 
             if (!keepConnection) base.disconnect();
 
+            DataCache.Del(filterEntity);
+
             return recordAffected;
 		}
 
         public object Get(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
         {
-            object returnEntity = null;
-            
-            var queryList = List(filterEntity, entityType, primaryKeyFilters, 0, 
-                                       string.Empty, string.Empty, string.Empty, 
-                                       false, false, false, true, loadComposition);
+            object result = null;
 
-            if (queryList.Count > 0) returnEntity = queryList[0];
+            if (DataCache.Get(filterEntity) != null)
+                result = DataCache.Get(filterEntity);
+            else
+            {
+                var queryList = List(filterEntity, entityType, primaryKeyFilters, 0,
+                                string.Empty, string.Empty, string.Empty,
+                                false, false, false, true, loadComposition);
+
+                if (queryList.Count > 0) result = queryList[0];
+            }
             
-            return returnEntity;
+            return result;
 		}
 
         public List<T> List<T>(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
         {
-            var result = List(filterEntity, entityType, primaryKeyFilters, recordLimit, showAttributes, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
+            // Verificando cache
+
+            IList result = null;
+
+            if (DataCache.Get(filterEntity) != null)
+                result = DataCache.Get(filterEntity) as IList;
+            else
+                result = List(filterEntity, entityType, primaryKeyFilters, recordLimit, showAttributes, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
 
             return result as List<T>;
         }
