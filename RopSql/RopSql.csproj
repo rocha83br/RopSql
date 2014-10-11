@@ -55,6 +55,8 @@
     <Compile Include="Classes\Language.cs" />
     <Compile Include="Classes\DataPersistence.cs" />
     <Compile Include="Classes\Parallelizer.cs" />
+    <Compile Include="Classes\ObjectSerializer.cs" />
+    <Compile Include="Classes\EntityReflector.cs" />
     <Compile Include="Interfaces\IDataAdapter.cs" />
     <Compile Include="Interfaces\IDataColumn.cs" />
     <Compile Include="Interfaces\IEntityHash.cs" />

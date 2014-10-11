@@ -57,7 +57,7 @@ namespace System.Data.RopSql
 
                 if (persistComposition)
                 {
-                    var entityColumnKey = getKeyColumn(entity, false);
+                    var entityColumnKey = EntityReflector.GetKeyColumn(entity, false);
 
                     if (entityColumnKey != null)
                         entityColumnKey.SetValue(entity, lastInsertedId, null);
@@ -76,7 +76,7 @@ namespace System.Data.RopSql
                 if (getTableAttrib(entity).IsCacheable)
                 {
                     var newCacheKey = Activator.CreateInstance(entityType);
-                    migrateEntityPrimaryKey(entity, newCacheKey);
+                    EntityReflector.MigrateEntityPrimaryKey(entity, newCacheKey);
                     DataCache.Put(newCacheKey, entity);
                 }
             }
@@ -172,9 +172,21 @@ namespace System.Data.RopSql
             IList result = null;
 
             if (DataCache.Get(filterEntity) != null)
+            {
                 result = DataCache.Get(filterEntity) as IList;
+                if (result == null)
+                {
+                    result = new List<T>();
+                    result.Add((T)DataCache.Get(filterEntity));
+                }
+            }
             else
+            {
                 result = List(filterEntity, entityType, primaryKeyFilters, recordLimit, showAttributes, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
+                
+                if (getTableAttrib(filterEntity).IsCacheable)
+                    DataCache.Put(filterEntity, result);
+            }
 
             return result as List<T>;
         }
@@ -336,9 +348,9 @@ namespace System.Data.RopSql
             else
                 sqlFilterData = null;
 
-            var keyColumn = getKeyColumn(entity, false).GetCustomAttributes(true)
-                                                       .FirstOrDefault(cln => cln is DataAnnotations.DataColumn 
-                                                                           && ((IDataColumn)cln).IsPrimaryKey()) as DataAnnotations.DataColumn;
+            var keyColumn = EntityReflector.GetKeyColumn(entity, false).GetCustomAttributes(true)
+                                                                 .FirstOrDefault(cln => cln is DataAnnotations.DataColumn 
+                                                                                     && ((IDataColumn)cln).IsPrimaryKey()) as DataAnnotations.DataColumn;
             string keyColumnName = string.Empty;
             if (keyColumn != null)
                 keyColumnName = keyColumn.ColumnName;
@@ -421,11 +433,11 @@ namespace System.Data.RopSql
                 {
                     if (!childEntityInstance.GetType().Name.Contains("List"))
                     {
-                        action = setPersistenceAction(childEntityInstance, getKeyColumn(childEntityInstance, false));
+                        action = setPersistenceAction(childEntityInstance, EntityReflector.GetKeyColumn(childEntityInstance, false));
                         childEntityFilter = Activator.CreateInstance(childEntityInstance.GetType());
 
                         if (action == (int)PersistenceAction.Edit)
-                            migrateEntityPrimaryKey(childEntityInstance, childEntityFilter);
+                            EntityReflector.MigrateEntityPrimaryKey(childEntityInstance, childEntityFilter);
 
                         setEntityForeignKey(entityParent, child);
 
@@ -444,11 +456,11 @@ namespace System.Data.RopSql
                             {
                                 childEntityFilter = Activator.CreateInstance(listItem.GetType());
 
-                                action = setPersistenceAction(listItem, getKeyColumn(listItem, false));
+                                action = setPersistenceAction(listItem, EntityReflector.GetKeyColumn(listItem, false));
 
                                 if (action == (int)PersistenceAction.Edit)
                                 {
-                                    migrateEntityPrimaryKey(listItem, childEntityFilter);
+                                    EntityReflector.MigrateEntityPrimaryKey(listItem, childEntityFilter);
                                     childFiltersList.Add(childEntityFilter);
                                 }
 
@@ -468,13 +480,13 @@ namespace System.Data.RopSql
 
                                 if (existRelation != null) manyToEntity = existRelation;
 
-                                action = setPersistenceAction(manyToEntity, getKeyColumn(manyToEntity, false));
+                                action = setPersistenceAction(manyToEntity, EntityReflector.GetKeyColumn(manyToEntity, false));
 
                                 object existFilter = null;
                                 if (action == (int)PersistenceAction.Edit)
                                 {
                                     existFilter = Activator.CreateInstance(manyToEntity.GetType());
-                                    migrateEntityPrimaryKey(manyToEntity, existFilter);
+                                    EntityReflector.MigrateEntityPrimaryKey(manyToEntity, existFilter);
                                 }
 
                                 result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, out commandParameters));
@@ -506,7 +518,7 @@ namespace System.Data.RopSql
 
             foreach (var composit in existentComposition)
             {
-                var compositKeyColumn = getKeyColumn(composit, false);
+                var compositKeyColumn = EntityReflector.GetKeyColumn(composit, false);
                 existentKeys.Add(int.Parse(compositKeyColumn.GetValue(composit, null).ToString()));
             }
 
@@ -521,8 +533,8 @@ namespace System.Data.RopSql
 
         private void setEntityForeignKey(object parentEntity, object childEntity)
         {
-            var parentKey = getKeyColumn(parentEntity, false);
-            var childForeignKey = getKeyColumn(childEntity, true, parentEntity.GetType().Name);
+            var parentKey = EntityReflector.GetKeyColumn(parentEntity, false);
+            var childForeignKey = EntityReflector.GetKeyColumn(childEntity, true, parentEntity.GetType().Name);
 
             if ((parentKey != null) && (childForeignKey != null))
                 childForeignKey.SetValue(childEntity, parentKey.GetValue(parentEntity, null), null);
@@ -533,7 +545,7 @@ namespace System.Data.RopSql
             bool result = false;
             HashSignature parentHashAnnotation = null;
 
-            var entityKeyColumn = getKeyColumn(parentEntity, false);
+            var entityKeyColumn = EntityReflector.GetKeyColumn(parentEntity, false);
 
             if (entityKeyColumn != null)
             {
@@ -586,7 +598,7 @@ namespace System.Data.RopSql
             if (genericAttributeFilter != null)
             {
                 var genericAttributeInstance = Activator.CreateInstance(genericAttributeFilter.PropertyType, true);
-                var relationKeyColumn = getKeyColumn(attributeInstance, false);
+                var relationKeyColumn = EntityReflector.GetKeyColumn(attributeInstance, false);
 
                 setEntityHashKey(loadedEntity, genericAttributeInstance);
 
@@ -596,7 +608,7 @@ namespace System.Data.RopSql
 
                 foreach (var genAttrib in genericAttributes)
                 {
-                    var genericAttributeKeyColumn = getKeyColumn(genAttrib, false);
+                    var genericAttributeKeyColumn = EntityReflector.GetKeyColumn(genAttrib, false);
 
                     genericAttributesId.Add(int.Parse(
                     genericAttributeKeyColumn.GetValue(genAttrib, null).ToString()));
@@ -611,18 +623,6 @@ namespace System.Data.RopSql
             }
 
             return result;
-        }
-
-        private void migrateEntityPrimaryKey(object entity, object filterEntity)
-        {
-            var entityKeyColumn = getKeyColumn(entity, false);
-
-            if (entityKeyColumn != null)
-            {
-                var keyValue = entityKeyColumn.GetValue(entity, null);
-                entityKeyColumn.SetValue(filterEntity, keyValue, null);
-                entityKeyColumn.SetValue(entity, 0, null);
-            }
         }
 
         private int setPersistenceAction(object entity, PropertyInfo entityKeyColumn)
@@ -679,7 +679,7 @@ namespace System.Data.RopSql
             if (tableAnnotation != null)
                 objectSQLDataRelation.Add("dataTable", ((DataAnnotations.DataTable)tableAnnotation).TableName.ToLower());
 
-            PropertyInfo primaryKeyAttribute = getKeyColumn(entity, false);
+            PropertyInfo primaryKeyAttribute = EntityReflector.GetKeyColumn(entity, false);
 
             PropertyInfo[] attributeList = entityType.GetProperties();
 
@@ -997,7 +997,7 @@ namespace System.Data.RopSql
 
                     PropertyInfo foreignKeyColumn = null;
 
-                    PropertyInfo primaryKeyColumn = getKeyColumn(loadedEntity, false);
+                    PropertyInfo primaryKeyColumn = EntityReflector.GetKeyColumn(loadedEntity, false);
 
                     switch (relationConfig.Cardinality)
                     {
@@ -1009,7 +1009,7 @@ namespace System.Data.RopSql
 
                             if (int.Parse(foreignKeyColumn.GetValue(loadedEntity, null).ToString()) > 0)
                             {
-                                var keyColumnAttribute = getKeyColumn(attributeInstance, false);
+                                var keyColumnAttribute = EntityReflector.GetKeyColumn(attributeInstance, false);
 
                                 var keyAttributeAnnotation = keyColumnAttribute.GetCustomAttributes(true)
                                                                                .FirstOrDefault(ca => ca.GetType().Name.Equals("DataColumn")) as DataAnnotations.DataColumn;
@@ -1052,7 +1052,7 @@ namespace System.Data.RopSql
                                 {                                    
                                     var childManyKeyValue = rel.GetType().GetProperty(relationConfig.IntermediaryKeyAttribute).GetValue(rel, null);
                                     var childFilter = Activator.CreateInstance(childManyType);
-                                    getKeyColumn(childFilter, false).SetValue(childFilter, childManyKeyValue, null);
+                                    EntityReflector.GetKeyColumn(childFilter, false).SetValue(childFilter, childManyKeyValue, null);
 
                                     childManyEntities.Add(Get(childFilter, childFilter.GetType(), null, false));
                                 }
@@ -1178,25 +1178,6 @@ namespace System.Data.RopSql
                                    .SingleOrDefault(atb => atb is DataAnnotations.DataTable) as DataAnnotations.DataTable;
         }
 
-        private PropertyInfo getKeyColumn(object entity, bool foreignKey, string parentName = "")
-        {
-            PropertyInfo entityKeyColumn = null;
-
-            if (!foreignKey)
-                entityKeyColumn = entity.GetType().GetProperties().FirstOrDefault(fd =>
-                                                   (fd.GetCustomAttributes(true).Any(ca =>
-                                                   (ca.GetType().Name.Equals("DataColumn")
-                                                    && ((DataAnnotations.DataColumn)ca).IsPrimaryKey()))));
-            else
-                entityKeyColumn = entity.GetType().GetProperties().FirstOrDefault(fd => 
-                                                   fd.Name.Contains(parentName) 
-                                                   && (fd.GetCustomAttributes(true).Any(ca =>
-                                                   (ca.GetType().Name.Equals("DataColumn")
-                                                    && ((DataAnnotations.DataColumn)ca).IsForeignKey()))));
-
-            return entityKeyColumn;
-        }
-
         private object parseManyToRelation(object childEntity, RelatedEntity relation)
         {
             object result = null;
@@ -1206,7 +1187,7 @@ namespace System.Data.RopSql
             {
                 var interEntity = Activator.CreateInstance(relation.IntermediaryEntity);
 
-                var childKey = getKeyColumn(childEntity, false);
+                var childKey = EntityReflector.GetKeyColumn(childEntity, false);
                 var interKeyAttrib = interEntity.GetType().GetProperties()
                                                 .FirstOrDefault(atb => atb.Name.Equals(relation.IntermediaryKeyAttribute));
 
