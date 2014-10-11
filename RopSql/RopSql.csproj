@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>System.Data.RopSql</RootNamespace>
     <AssemblyName>System.Data.RopSql</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\..\..\..\..\ProjetosOnline\Projeto SGEv2\Implementacoes\Solucao.NET\SGEv2\Libs\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
@@ -55,7 +58,6 @@
     <Compile Include="Classes\Language.cs" />
     <Compile Include="Classes\DataPersistence.cs" />
     <Compile Include="Classes\Parallelizer.cs" />
-    <Compile Include="Classes\ObjectSerializer.cs" />
     <Compile Include="Classes\EntityReflector.cs" />
     <Compile Include="Interfaces\IDataAdapter.cs" />
     <Compile Include="Interfaces\IDataColumn.cs" />
@@ -89,6 +91,7 @@
       <LastGenOutput>SQLANSIRepository.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

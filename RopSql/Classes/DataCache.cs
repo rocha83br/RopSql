@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using Newtonsoft.Json;
 
 namespace System.Data.RopSql
 {
@@ -23,7 +25,7 @@ namespace System.Data.RopSql
 
             if (cacheKey != null)
             {
-                var serialKey = ObjectSerializer.SerializeText(cacheKey);
+                var serialKey = JsonConvert.SerializeObject(cacheKey);
                 var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
                 if (cacheItems.ContainsKey(serialCacheKey))
                     result = cacheItems[serialCacheKey];
@@ -41,12 +43,19 @@ namespace System.Data.RopSql
         {
             if ((cacheKey != null) && (cacheItem != null))
             {
-                var serialKey = ObjectSerializer.SerializeText(cacheKey);
+                var serialKey = JsonConvert.SerializeObject(cacheKey);
                 var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
                 if (!cacheItems.ContainsKey(serialCacheKey))
                     cacheItems.Add(serialCacheKey, cacheItem);
 
-                updateCacheTree(cacheKey.GetType().GetHashCode(), cacheItem);
+                var parallelParam = new ParallelParam()
+                {
+                    Param1 = cacheKey.GetType().GetHashCode(),
+                    Param2 = cacheItem
+                };
+
+                var parallelDelegate = new ParameterizedThreadStart(updateCacheTree);
+                Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
             }
         }
 
@@ -54,7 +63,7 @@ namespace System.Data.RopSql
         {
             if (cacheKey != null)
             {
-                var serialKey = ObjectSerializer.SerializeText(cacheKey);
+                var serialKey = JsonConvert.SerializeObject(cacheKey);
                 var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
                 if (cacheItems.ContainsKey(serialCacheKey))
                     cacheItems.Remove(serialCacheKey);
@@ -70,9 +79,11 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-        private static bool updateCacheTree(int typeKeyCode, object cacheItem)
+        private static void updateCacheTree(object param)
         {
-            bool result = false;
+            ParallelParam parallelParam = param as ParallelParam;
+            int typeKeyCode = int.Parse(parallelParam.Param1.ToString());;
+            object cacheItem = parallelParam.Param2;
 
             if (!(cacheItem is IList))
             {
@@ -89,14 +100,11 @@ namespace System.Data.RopSql
                             if (EntityReflector.MatchKeys(cacheItem, listValue[count]))
                             {
                                 listValue[count] = cacheItem;
-                                result = true;
                                 break;
                             }
                         }
                 }
             }
-
-            return result;
         }
 
         #endregion
