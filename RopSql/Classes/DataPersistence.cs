@@ -77,15 +77,17 @@ namespace System.Data.RopSql
                     Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
                 }
                 else
+                {
                     if (!keepConnection) base.disconnect();
 
-                // Atualizacao do Cache
+                    // Atualizacao do Cache
 
-                if (getTableAttrib(entity).IsCacheable)
-                {
-                    var newCacheKey = Activator.CreateInstance(entityType);
-                    EntityReflector.MigrateEntityPrimaryKey(entity, newCacheKey);
-                    DataCache.Put(newCacheKey, entity);
+                    if (getTableAttrib(entity).IsCacheable)
+                    {
+                        var newCacheKey = Activator.CreateInstance(entityType);
+                        EntityReflector.MigrateEntityPrimaryKey(entity, newCacheKey);
+                        DataCache.Put(newCacheKey, entity);
+                    }
                 }
             }
 
@@ -112,8 +114,6 @@ namespace System.Data.RopSql
 
             if (persistComposition)
             {
-                DataCache.Del(filterEntity, true);
-
                 ParallelParam parallelParam = new ParallelParam()
                 {
                     Param1 = entity,
@@ -1222,7 +1222,7 @@ namespace System.Data.RopSql
 
         private void parseCompositionAsync(object param)
         {
-            Thread.Sleep(500);
+            Thread.Sleep(200);
 
             ParallelParam parallelParam = param as ParallelParam;
 
@@ -1243,6 +1243,8 @@ namespace System.Data.RopSql
                     executeCommand(cmd, commandParameters);
 
                 if (!keepConnection) base.disconnect();
+
+                DataCache.Del(filterEntity, true);
             }
             catch (Exception ex)
             {
