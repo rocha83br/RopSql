@@ -64,6 +64,14 @@ namespace System.Data.RopSql
                 {
                     var serialKey = JsonConvert.SerializeObject(cacheKey);
                     var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
+
+                    if (!(cacheItem is IList))
+                    {
+                        var persistAdapter = new RopSqlDataAdapter();
+                        cacheItem = new RopSqlDataAdapter().Get(cacheKey, true);
+                        persistAdapter = null;
+                    }
+                                        
                     if (!cacheItems.ContainsKey(serialCacheKey))
                         cacheItems.Add(serialCacheKey, cacheItem);
 
