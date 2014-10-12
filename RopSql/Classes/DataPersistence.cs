@@ -83,11 +83,7 @@ namespace System.Data.RopSql
                     // Atualizacao do Cache
 
                     if (getTableAttrib(entity).IsCacheable)
-                    {
-                        var newCacheKey = Activator.CreateInstance(entityType);
-                        EntityReflector.MigrateEntityPrimaryKey(entity, newCacheKey);
-                        DataCache.Put(newCacheKey, entity);
-                    }
+                        DataCache.Del(entity, true);
                 }
             }
 
@@ -134,10 +130,7 @@ namespace System.Data.RopSql
                 // Atualizacao do Cache
 
                 if (getTableAttrib(entity).IsCacheable)
-                {
-                    DataCache.Del(filterEntity);
-                    DataCache.Put(filterEntity, entity);
-                }
+                    DataCache.Del(filterEntity, true);
             }
 
             return recordsAffected;
@@ -163,7 +156,7 @@ namespace System.Data.RopSql
 
             if (!keepConnection) base.disconnect();
 
-            DataCache.Del(filterEntity);
+            DataCache.Del(filterEntity, true);
 
             return recordAffected;
 		}
