@@ -58,18 +58,25 @@ namespace System.Data.RopSql
             object cacheKey = parallelParam.Param1;
             object cacheItem = parallelParam.Param2;
 
-            if ((cacheKey != null) && (cacheItem != null))
+            try
             {
-                var serialKey = JsonConvert.SerializeObject(cacheKey);
-                var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
-                if (!cacheItems.ContainsKey(serialCacheKey))
-                    cacheItems.Add(serialCacheKey, cacheItem);
+                if ((cacheKey != null) && (cacheItem != null))
+                {
+                    var serialKey = JsonConvert.SerializeObject(cacheKey);
+                    var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
+                    if (!cacheItems.ContainsKey(serialCacheKey))
+                        cacheItems.Add(serialCacheKey, cacheItem);
 
-                updateCacheTree(cacheKey.GetType().GetHashCode(), cacheItem);
+                    updateCacheTree(cacheKey.GetType().GetHashCode(), cacheItem);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
 
-        public static void Del(object cacheKey)
+        public static void Del(object cacheKey, bool deleteAll = false)
         {
             if (cacheKey != null)
             {
@@ -77,6 +84,9 @@ namespace System.Data.RopSql
                 var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
                 if (cacheItems.ContainsKey(serialCacheKey))
                     cacheItems.Remove(serialCacheKey);
+
+                if (deleteAll)
+                    updateCacheTree(cacheKey.GetType().GetHashCode(), cacheKey, true);
             }
         }
 
@@ -89,26 +99,30 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-        private static void updateCacheTree(int typeKeyCode, object cacheItem)
+        private static void updateCacheTree(int typeKeyCode, object cacheItem, bool removeItem = false)
         {
             if (!(cacheItem is IList))
             {
                 var typeCacheItems = cacheItems.Where(itm => itm.Key.Key.Equals(typeKeyCode)).ToList();
                 var itemKeyId = EntityReflector.GetKeyColumn(cacheItem, false).GetValue(cacheItem, null);
 
-                foreach (var typeCacheItem in typeCacheItems)
+                for (var typeCount = 0; typeCount < typeCacheItems.Count; typeCount++)
                 {
-                    var listValue = typeCacheItem.Value as IList;
+                    if (!removeItem)
+                    {
+                        var listValue = typeCacheItems[typeCount].Value as IList;
 
-                    if (listValue != null)
-                        for (int count = 0; count < ((IList)typeCacheItem.Value).Count; count++)
-                        {
-                            if (EntityReflector.MatchKeys(cacheItem, listValue[count]))
+                        if (listValue != null)
+                            for (int valueCount = 0; valueCount < ((IList)typeCacheItems[typeCount].Value).Count; valueCount++)
                             {
-                                listValue[count] = cacheItem;
-                                break;
+                                if (EntityReflector.MatchKeys(cacheItem, listValue[valueCount]))
+                                {
+                                    listValue[valueCount] = cacheItem;
+                                }
                             }
-                        }
+                    }
+                    else
+                        cacheItems.Remove(typeCacheItems[typeCount].Key);
                 }
             }
         }

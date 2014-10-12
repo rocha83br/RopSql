@@ -19,7 +19,7 @@ namespace System.Data.RopSql
         readonly string cultureAcronym;
 
         protected readonly SqlConnection connection;
-        SqlTransaction transactionControl;
+        protected SqlTransaction transactionControl;
 
         #endregion
 
@@ -71,9 +71,11 @@ namespace System.Data.RopSql
             {
                 if (connection.State != ConnectionState.Open)
                 {
-                    connection.ConnectionString = this.connectionConfig;
-
-                    connection.Open();
+                    if (connection.State != ConnectionState.Connecting)
+                    {
+                        connection.ConnectionString = this.connectionConfig;
+                        connection.Open();
+                    }
                 }
             }
             else
@@ -101,6 +103,9 @@ namespace System.Data.RopSql
             {
                 sqlCommand = connection.CreateCommand();
                 sqlCommand.CommandText = sqlInstruction;
+                if ((transactionControl != null)
+                        && (transactionControl.Connection != null))
+                    sqlCommand.Transaction = transactionControl;
 
                 sqlCommand.Parameters.Clear();
                 foreach (var param in parameters)
@@ -144,6 +149,9 @@ namespace System.Data.RopSql
 
                 sqlCommand = connection.CreateCommand();
                 sqlCommand.CommandText = sqlInstruction;
+                if ((transactionControl != null)
+                        && (transactionControl.Connection != null))
+                    sqlCommand.Transaction = transactionControl;
 
                 sqlAdapter = new SqlDataAdapter(sqlCommand);
 

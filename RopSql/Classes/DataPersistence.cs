@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Configuration;
+using System.Threading;
 using System.Data.RopSql;
 using System.Data.RopSql.Interfaces;
 using System.Data.RopSql.Resources;
@@ -41,7 +42,6 @@ namespace System.Data.RopSql
             string sqlInstruction = string.Empty;
             Dictionary<object, object> commandParameters;
             int lastInsertedId = 0;
-            List<string> childEntityCommands = null;
 
             if (keepConnection || base.connect())
             {
@@ -55,6 +55,8 @@ namespace System.Data.RopSql
                  
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
 
+                // Persistencia assincrona da composicao
+
                 if (persistComposition)
                 {
                     var entityColumnKey = EntityReflector.GetKeyColumn(entity, false);
@@ -62,22 +64,28 @@ namespace System.Data.RopSql
                     if (entityColumnKey != null)
                         entityColumnKey.SetValue(entity, lastInsertedId, null);
 
-                    childEntityCommands = parseComposition(entity, entityType, (int)PersistenceAction.Create, null);
+                    ParallelParam parallelParam = new ParallelParam()
+                    {
+                        Param1 = entity,
+                        Param2 = entityType,
+                        Param3 = (int)PersistenceAction.Create,
+                        Param4 = commandParameters
+                    };
 
-                    if (base.connection.State == ConnectionState.Closed)
-                        base.connect();
+                    var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
 
-                    foreach (var cmd in childEntityCommands)
-                        executeCommand(cmd, commandParameters);
+                    Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
                 }
-                
-                if (!keepConnection) base.disconnect();
+                else
+                    if (!keepConnection) base.disconnect();
+
+                // Atualizacao do Cache
 
                 if (getTableAttrib(entity).IsCacheable)
                 {
                     var newCacheKey = Activator.CreateInstance(entityType);
                     EntityReflector.MigrateEntityPrimaryKey(entity, newCacheKey);
-                    DataCache.Put(newCacheKey, Get(entity, entity.GetType(), null, true));
+                    DataCache.Put(newCacheKey, entity);
                 }
             }
 
@@ -100,23 +108,36 @@ namespace System.Data.RopSql
                 recordsAffected = executeCommand(sqlInstruction, commandParameters);
             }
 
+            // Persistencia assincrona da composicao
+
             if (persistComposition)
             {
-                childEntityCommands = parseComposition(entity, entityType, (int)PersistenceAction.Edit, filterEntity);
+                DataCache.Del(filterEntity, true);
 
-                if (base.connection.State == ConnectionState.Closed)
-                    base.connect();
+                ParallelParam parallelParam = new ParallelParam()
+                {
+                    Param1 = entity,
+                    Param2 = entityType,
+                    Param3 = (int)PersistenceAction.Edit,
+                    Param4 = commandParameters,
+                    Param5 = filterEntity
+                };
 
-                foreach (var cmd in childEntityCommands)
-                    recordsAffected += executeCommand(cmd, commandParameters);
+                var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
+
+                Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
             }
-
-            if (!keepConnection) base.disconnect();
-
-            if (getTableAttrib(entity).IsCacheable)
+            else
             {
-                DataCache.Del(filterEntity);
-                DataCache.Put(filterEntity, Get(entity, entity.GetType(), null, true));
+                if (!keepConnection) base.disconnect();
+
+                // Atualizacao do Cache
+
+                if (getTableAttrib(entity).IsCacheable)
+                {
+                    DataCache.Del(filterEntity);
+                    DataCache.Put(filterEntity, entity);
+                }
             }
 
             return recordsAffected;
@@ -289,7 +310,7 @@ namespace System.Data.RopSql
                 returnList = parseDatabaseReturn(queryReturn, filterEntity.GetType());
             }
 
-            if(!keepConnection) base.disconnect();
+            if (!keepConnection) base.disconnect();
 
             // Efetuando carga da composição quando existente (Eager Loading)
 
@@ -1197,6 +1218,36 @@ namespace System.Data.RopSql
             }
 
             return result;
+        }
+
+        private void parseCompositionAsync(object param)
+        {
+            Thread.Sleep(500);
+
+            ParallelParam parallelParam = param as ParallelParam;
+
+            object entity = parallelParam.Param1;
+            Type entityType = parallelParam.Param2 as Type;
+            int action = int.Parse(parallelParam.Param3.ToString());
+            Dictionary<object, object> commandParameters = parallelParam.Param4 as Dictionary<object, object>;
+            object filterEntity = parallelParam.Param5;
+
+            try
+            {
+                List<string> childEntityCommands = parseComposition(entity, entityType, action, filterEntity);
+
+                if (base.connection.State == ConnectionState.Closed)
+                    base.connect();
+
+                foreach (var cmd in childEntityCommands)
+                    executeCommand(cmd, commandParameters);
+
+                if (!keepConnection) base.disconnect();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         #endregion
