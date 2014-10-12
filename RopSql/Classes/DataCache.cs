@@ -41,6 +41,23 @@ namespace System.Data.RopSql
 
         public static void Put(object cacheKey, object cacheItem)
         {
+            var parallelParam = new ParallelParam()
+            {
+                Param1 = cacheKey,
+                Param2 = cacheItem
+            };
+
+            var parallelDelegate = new ParameterizedThreadStart(put);
+
+            Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
+        }
+
+        private static void put(object param)
+        {
+            ParallelParam parallelParam = param as ParallelParam;
+            object cacheKey = parallelParam.Param1;
+            object cacheItem = parallelParam.Param2;
+
             if ((cacheKey != null) && (cacheItem != null))
             {
                 var serialKey = JsonConvert.SerializeObject(cacheKey);
@@ -48,14 +65,7 @@ namespace System.Data.RopSql
                 if (!cacheItems.ContainsKey(serialCacheKey))
                     cacheItems.Add(serialCacheKey, cacheItem);
 
-                var parallelParam = new ParallelParam()
-                {
-                    Param1 = cacheKey.GetType().GetHashCode(),
-                    Param2 = cacheItem
-                };
-
-                var parallelDelegate = new ParameterizedThreadStart(updateCacheTree);
-                Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
+                updateCacheTree(cacheKey.GetType().GetHashCode(), cacheItem);
             }
         }
 
@@ -79,12 +89,8 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-        private static void updateCacheTree(object param)
+        private static void updateCacheTree(int typeKeyCode, object cacheItem)
         {
-            ParallelParam parallelParam = param as ParallelParam;
-            int typeKeyCode = int.Parse(parallelParam.Param1.ToString());;
-            object cacheItem = parallelParam.Param2;
-
             if (!(cacheItem is IList))
             {
                 var typeCacheItems = cacheItems.Where(itm => itm.Key.Key.Equals(typeKeyCode)).ToList();

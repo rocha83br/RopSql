@@ -77,7 +77,7 @@ namespace System.Data.RopSql
                 {
                     var newCacheKey = Activator.CreateInstance(entityType);
                     EntityReflector.MigrateEntityPrimaryKey(entity, newCacheKey);
-                    DataCache.Put(newCacheKey, entity);
+                    DataCache.Put(newCacheKey, Get(entity, entity.GetType(), null, true));
                 }
             }
 
@@ -116,7 +116,7 @@ namespace System.Data.RopSql
             if (getTableAttrib(entity).IsCacheable)
             {
                 DataCache.Del(filterEntity);
-                DataCache.Put(filterEntity, entity);
+                DataCache.Put(filterEntity, Get(entity, entity.GetType(), null, true));
             }
 
             return recordsAffected;
