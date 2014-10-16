@@ -1253,7 +1253,8 @@ namespace System.Data.RopSql
             }
             catch (Exception ex)
             {
-                base.CancelTransaction();
+                if (base.transactionControl != null)
+                    base.CancelTransaction();
                 
                 if (base.connection.State == ConnectionState.Open)
                     Delete(filterEntity, filterEntity.GetType());
