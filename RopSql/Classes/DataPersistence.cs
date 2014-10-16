@@ -55,6 +55,10 @@ namespace System.Data.RopSql
                  
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
 
+                // Atualizacao do Cache
+
+                DataCache.Del(entity, true);
+
                 // Persistencia assincrona da composicao
 
                 if (persistComposition)
@@ -105,6 +109,10 @@ namespace System.Data.RopSql
 
                 recordsAffected = executeCommand(sqlInstruction, commandParameters);
             }
+
+            // Atualizacao do Cache
+
+            DataCache.Del(filterEntity, true);
 
             // Persistencia assincrona da composicao
 
@@ -1232,8 +1240,12 @@ namespace System.Data.RopSql
                 if (base.connection.State == ConnectionState.Closed)
                     base.connect();
 
+                base.StartTransaction();
+
                 foreach (var cmd in childEntityCommands)
                     executeCommand(cmd, commandParameters);
+
+                base.CommitTransaction();
 
                 if (!keepConnection) base.disconnect();
 
@@ -1241,6 +1253,11 @@ namespace System.Data.RopSql
             }
             catch (Exception ex)
             {
+                base.CancelTransaction();
+                
+                if (base.connection.State == ConnectionState.Open)
+                    Delete(filterEntity, filterEntity.GetType());
+                
                 throw;
             }
         }
