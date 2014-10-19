@@ -56,8 +56,8 @@ namespace System.Data.RopSql
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
 
                 // Atualizacao do Cache
-
-                DataCache.Del(entity, true);
+                if (getTableAttrib(entity).IsCacheable)
+                    DataCache.Del(entity, true);
 
                 // Persistencia assincrona da composicao
 
@@ -113,7 +113,8 @@ namespace System.Data.RopSql
 
             // Atualizacao do Cache
 
-            DataCache.Del(entity, true);
+            if (getTableAttrib(entity).IsCacheable)
+                DataCache.Del(entity, true);
 
             // Persistencia assincrona da composicao
 
@@ -474,50 +475,69 @@ namespace System.Data.RopSql
                         var childListInstance = (IList)childEntityInstance;
                         List<object> childFiltersList = new List<object>();
 
-                        foreach (var listItem in childListInstance)
+                        if (childListInstance.Count > 0)
                         {
-                            if (relationAttrib.Cardinality == RelationCardinality.OneToMany)
+                            foreach (var listItem in childListInstance)
                             {
-                                childEntityFilter = Activator.CreateInstance(listItem.GetType());
-
-                                action = setPersistenceAction(listItem, EntityReflector.GetKeyColumn(listItem, false));
-
-                                if (action == (int)PersistenceAction.Edit)
+                                if (relationAttrib.Cardinality == RelationCardinality.OneToMany)
                                 {
-                                    EntityReflector.MigrateEntityPrimaryKey(listItem, childEntityFilter);
-                                    childFiltersList.Add(childEntityFilter);
+                                    childEntityFilter = Activator.CreateInstance(listItem.GetType());
+
+                                    action = setPersistenceAction(listItem, EntityReflector.GetKeyColumn(listItem, false));
+
+                                    if (action == (int)PersistenceAction.Edit)
+                                    {
+                                        EntityReflector.MigrateEntityPrimaryKey(listItem, childEntityFilter);
+                                        childFiltersList.Add(childEntityFilter);
+                                    }
+
+                                    setEntityForeignKey(entityParent, listItem);
+                                    setEntityHashKey(entityParent, listItem);
+
+                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
                                 }
-
-                                setEntityForeignKey(entityParent, listItem);
-                                setEntityHashKey(entityParent, listItem);
-
-                                result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
-                            }
-                            else
-                            {
-                                var manyToEntity = parseManyToRelation(listItem, relationAttrib);
-
-                                setEntityForeignKey(entityParent, manyToEntity);
-                                setEntityHashKey(entityParent, manyToEntity);
-   
-                                var existRelation = this.Get(manyToEntity, manyToEntity.GetType(), null, false);
-
-                                if (existRelation != null) manyToEntity = existRelation;
-
-                                action = setPersistenceAction(manyToEntity, EntityReflector.GetKeyColumn(manyToEntity, false));
-
-                                object existFilter = null;
-                                if (action == (int)PersistenceAction.Edit)
+                                else
                                 {
-                                    existFilter = Activator.CreateInstance(manyToEntity.GetType());
-                                    EntityReflector.MigrateEntityPrimaryKey(manyToEntity, existFilter);
-                                    childFiltersList.Add(existFilter);
-                                }
+                                    var manyToEntity = parseManyToRelation(listItem, relationAttrib);
 
-                                result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, out commandParameters));
+                                    setEntityForeignKey(entityParent, manyToEntity);
+                                    setEntityHashKey(entityParent, manyToEntity);
+
+                                    var existRelation = this.Get(manyToEntity, manyToEntity.GetType(), null, false);
+
+                                    if (existRelation != null) manyToEntity = existRelation;
+
+                                    action = setPersistenceAction(manyToEntity, EntityReflector.GetKeyColumn(manyToEntity, false));
+
+                                    object existFilter = null;
+                                    if (action == (int)PersistenceAction.Edit)
+                                    {
+                                        existFilter = Activator.CreateInstance(manyToEntity.GetType());
+                                        EntityReflector.MigrateEntityPrimaryKey(manyToEntity, existFilter);
+                                        childFiltersList.Add(existFilter);
+                                    }
+
+                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, out commandParameters));
+                                }
                             }
                         }
+                        else
+                        {
+                            var childInstance = Activator.CreateInstance(childListInstance.GetType().GetGenericArguments()[0]);
 
+                            var childEntity = new object();
+                            if (relationAttrib.Cardinality == RelationCardinality.ManyToMany)
+                            {
+                                childEntity = parseManyToRelation(childInstance, relationAttrib);
+                                setEntityForeignKey(entityParent, childEntity);
+                                setEntityHashKey(entityParent, childEntity);
+                            }
+                            else
+                                childEntity = childInstance;
+
+                            childFiltersList.Add(childEntity);
+                        }
+                        
                         if ((childFiltersList.Count > 0) && !(relationAttrib.Cardinality == RelationCardinality.OneToOne))
                             result.Add(getExclusionComposition(filterEntity, childFiltersList));
                     }
@@ -1226,7 +1246,7 @@ namespace System.Data.RopSql
 
         private void parseCompositionAsync(object param)
         {
-            Thread.Sleep(400);
+            Thread.Sleep(700);
 
             ParallelParam parallelParam = param as ParallelParam;
 
@@ -1251,6 +1271,10 @@ namespace System.Data.RopSql
                 base.CommitTransaction();
 
                 if (!keepConnection) base.disconnect();
+
+                // Atualizacao do Cache
+                if (getTableAttrib(entity).IsCacheable)
+                    DataCache.Del(entity, true);
             }
             catch (Exception ex)
             {
