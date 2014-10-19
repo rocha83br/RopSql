@@ -1223,7 +1223,7 @@ namespace System.Data.RopSql
 
         private void parseCompositionAsync(object param)
         {
-            Thread.Sleep(200);
+            Thread.Sleep(300);
 
             ParallelParam parallelParam = param as ParallelParam;
 

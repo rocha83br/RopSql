@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Configuration;
 using Newtonsoft.Json;
 
 namespace System.Data.RopSql
@@ -12,6 +13,7 @@ namespace System.Data.RopSql
     {
         #region Declarations
 
+        private static int cacheSize = 0;
         private static Dictionary<KeyValuePair<int, string>, object> cacheItems = 
             new Dictionary<KeyValuePair<int, string>, object>();
 
@@ -62,6 +64,8 @@ namespace System.Data.RopSql
             {
                 if ((cacheKey != null) && (cacheItem != null))
                 {
+                    checkMemoryUsage();
+
                     var serialKey = JsonConvert.SerializeObject(cacheKey);
                     var serialCacheKey = new KeyValuePair<int, string>(cacheKey.GetType().GetHashCode(), serialKey);
 
@@ -106,6 +110,19 @@ namespace System.Data.RopSql
         #endregion
 
         #region Helper Methods
+
+        private static void checkMemoryUsage()
+        {
+            // Verificando limite do cache
+
+            if (ConfigurationManager.AppSettings["RopSqlCacheLimit"] != null)
+            {
+                var paramSize = int.Parse(ConfigurationManager.AppSettings["RopSqlCacheLimit"]);
+                var memSize = GC.GetTotalMemory(false) / 1024 / 1024;
+                if (memSize > paramSize)
+                    cacheItems = new Dictionary<KeyValuePair<int, string>, object>();
+            }
+        }
 
         private static void updateCacheTree(int typeKeyCode, object cacheItem, bool removeItem = false)
         {
