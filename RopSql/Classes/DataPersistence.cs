@@ -79,6 +79,7 @@ namespace System.Data.RopSql
                     var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
 
                     Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
+                    //parseCompositionAsync(parallelParam);
                 }
                 else
                 {
@@ -112,7 +113,7 @@ namespace System.Data.RopSql
 
             // Atualizacao do Cache
 
-            DataCache.Del(filterEntity, true);
+            DataCache.Del(entity, true);
 
             // Persistencia assincrona da composicao
 
@@ -130,6 +131,7 @@ namespace System.Data.RopSql
                 var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
 
                 Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
+                //parseCompositionAsync(parallelParam);
             }
             else
             {
@@ -509,13 +511,14 @@ namespace System.Data.RopSql
                                 {
                                     existFilter = Activator.CreateInstance(manyToEntity.GetType());
                                     EntityReflector.MigrateEntityPrimaryKey(manyToEntity, existFilter);
+                                    childFiltersList.Add(existFilter);
                                 }
 
                                 result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, out commandParameters));
                             }
                         }
 
-                        if ((childFiltersList.Count > 0) && (relationAttrib.Cardinality == RelationCardinality.OneToMany))
+                        if ((childFiltersList.Count > 0) && !(relationAttrib.Cardinality == RelationCardinality.OneToOne))
                             result.Add(getExclusionComposition(filterEntity, childFiltersList));
                     }
                 }
@@ -1223,7 +1226,7 @@ namespace System.Data.RopSql
 
         private void parseCompositionAsync(object param)
         {
-            Thread.Sleep(300);
+            Thread.Sleep(400);
 
             ParallelParam parallelParam = param as ParallelParam;
 
@@ -1248,8 +1251,6 @@ namespace System.Data.RopSql
                 base.CommitTransaction();
 
                 if (!keepConnection) base.disconnect();
-
-                DataCache.Del(filterEntity, true);
             }
             catch (Exception ex)
             {

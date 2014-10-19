@@ -13,7 +13,6 @@ namespace System.Data.RopSql
     {
         #region Declarations
 
-        private static int cacheSize = 0;
         private static Dictionary<KeyValuePair<int, string>, object> cacheItems = 
             new Dictionary<KeyValuePair<int, string>, object>();
 
