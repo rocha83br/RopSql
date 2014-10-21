@@ -56,8 +56,7 @@ namespace System.Data.RopSql
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
 
                 // Atualizacao do Cache
-                if (getTableAttrib(entity).IsCacheable)
-                    DataCache.Del(entity, true);
+               DataCache.Del(entity, true);
 
                 // Persistencia assincrona da composicao
 
@@ -1273,8 +1272,8 @@ namespace System.Data.RopSql
                 if (!keepConnection) base.disconnect();
 
                 // Atualizacao do Cache
-                if (getTableAttrib(entity).IsCacheable)
-                    DataCache.Del(entity, true);
+                
+                DataCache.Del(entity, true);
             }
             catch (Exception ex)
             {
