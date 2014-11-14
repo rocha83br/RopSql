@@ -1164,8 +1164,11 @@ namespace System.Data.RopSql
             object result = null;
 
             if (!string.IsNullOrEmpty(columnValue))
-                result = Convert.ChangeType(columnValue, columnDataType);
-
+                if (!columnDataType.Name.Contains("Nullable")) 
+                    result = Convert.ChangeType(columnValue, columnDataType);
+                else
+                    result = Convert.ChangeType(columnValue, Nullable.GetUnderlyingType(columnDataType));
+                    
             return result;
         }
 
