@@ -15,5 +15,6 @@ namespace System.Data.RopSql.Interfaces
         bool IsHashSignature();
         bool IsHashId();
         string GetColumnName();
+        string GetHashColumn();
     }
 }

@@ -83,6 +83,11 @@ namespace System.Data.RopSql.DataAnnotations
             return ColumnName;
         }
 
+        public string GetHashColumn()
+        {
+            return string.Empty;
+        }
+
         #endregion
 
         #region Public Methods
@@ -156,11 +161,11 @@ namespace System.Data.RopSql.DataAnnotations
         public string KeyColumn;
         public string ForeignKeyColumn;
         public string IntermediaryColumnKey;
+        public string HashColumn;
         public RelationalJunctionType JunctionType;
         public bool Listable;
         public bool Filterable;
         public bool ListLabel;
-        public bool ConnectHash;
 
         public bool IsPrimaryKey()
         {
@@ -200,6 +205,11 @@ namespace System.Data.RopSql.DataAnnotations
         public string GetColumnName()
         {
             return ColumnName;
+        }
+
+        public string GetHashColumn()
+        {
+            return HashColumn;
         }
 
         #endregion
