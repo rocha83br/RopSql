@@ -973,7 +973,7 @@ namespace System.Data.RopSql
                             if ((action == (int)PersistenceAction.Edit) && filterColumnValue.Equals(false))
                                 comparation = " = 0";
 
-                            if (!(filterColumnName.ToString().EndsWith(".Active") && filterColumnValue.Equals(false)))
+                            if (!filterColumnValue.Equals(false))
                                 columnFilterList += filterColumnName + comparation +
                                     ((compareRule) ? SqlOperator.Or : SqlOperator.And);
                         }
