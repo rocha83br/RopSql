@@ -56,7 +56,9 @@ namespace System.Data.RopSql
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
 
                 // Atualizacao do Cache
-                DataCache.Del(entity, true);
+                var tableAttrib = getTableAttrib(entity);
+                if (tableAttrib.IsCacheable)
+                    DataCache.Del(entity, true);
 
                 // Persistencia assincrona da composicao
 
@@ -86,7 +88,7 @@ namespace System.Data.RopSql
 
                     // Atualizacao do Cache
 
-                    if (getTableAttrib(entity).IsCacheable)
+                    if (tableAttrib.IsCacheable)
                         DataCache.Del(entity, true);
                 }
             }
@@ -111,8 +113,8 @@ namespace System.Data.RopSql
             }
 
             // Atualizacao do Cache
-
-            if (getTableAttrib(entity).IsCacheable)
+            var tableAttrib = getTableAttrib(entity);
+            if (tableAttrib.IsCacheable)
                 DataCache.Del(entity, true);
 
             // Persistencia assincrona da composicao
@@ -139,7 +141,7 @@ namespace System.Data.RopSql
 
                 // Atualizacao do Cache
 
-                if (getTableAttrib(entity).IsCacheable)
+                if (tableAttrib.IsCacheable)
                     DataCache.Del(filterEntity, true);
             }
 
@@ -166,6 +168,7 @@ namespace System.Data.RopSql
 
             if (!keepConnection) base.disconnect();
 
+            if (getTableAttrib(filterEntity).IsCacheable)
             DataCache.Del(filterEntity, true);
 
             return recordAffected;
