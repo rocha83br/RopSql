@@ -896,10 +896,13 @@ namespace System.Data.RopSql
 
                             break;
                         default: // Alteração e Exclusão
-                            if (entityColumnValue == null)
-                                entityColumnValue = SqlDefaultValue.Null;
-                            
-                            columnValueList += string.Format("{0} = {1}, ", entityColumnName, entityColumnValue);
+                            if (!entityAttributeName.ToLower().Equals("id"))
+                            {
+                                if (entityColumnValue == null)
+                                    entityColumnValue = SqlDefaultValue.Null;
+
+                                columnValueList += string.Format("{0} = {1}, ", entityColumnName, entityColumnValue);
+                            }
 
                             break;
                     }
