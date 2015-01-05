@@ -944,7 +944,8 @@ namespace System.Data.RopSql
                                                    && !filterColumnName.ToString().ToLower().Contains("date")
                                                    && !filterColumnName.ToString().ToLower().Contains("hash")
                                                    && !filterColumnName.ToString().ToLower().StartsWith("id")
-                                                   && !filterColumnName.ToString().ToLower().EndsWith("id");
+                                                   && !filterColumnName.ToString().ToLower().EndsWith("id")
+                                                   && !filterColumnName.ToString().ToLower().Contains(".id");
 
                             string comparation = string.Empty;
 
