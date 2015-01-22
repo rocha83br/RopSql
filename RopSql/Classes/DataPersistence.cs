@@ -1049,6 +1049,7 @@ namespace System.Data.RopSql
                     relationConfig = (RelatedEntity)annotation;
 
                     PropertyInfo foreignKeyColumn = null;
+                    object foreignKeyValue = null;
 
                     PropertyInfo primaryKeyColumn = EntityReflector.GetKeyColumn(loadedEntity, false);
 
@@ -1060,7 +1061,9 @@ namespace System.Data.RopSql
 
                             foreignKeyColumn = loadedEntity.GetType().GetProperty(relationConfig.ForeignKeyAttribute);
 
-                            if (int.Parse(foreignKeyColumn.GetValue(loadedEntity, null).ToString()) > 0)
+                            foreignKeyValue = foreignKeyColumn.GetValue(loadedEntity, null);
+
+                            if ((foreignKeyValue != null) && int.Parse(foreignKeyValue.ToString()) > 0)
                             {
                                 var keyColumnAttribute = EntityReflector.GetKeyColumn(attributeInstance, false);
 
