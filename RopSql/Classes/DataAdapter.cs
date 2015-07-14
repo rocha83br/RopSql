@@ -9,7 +9,7 @@ using System.Data.RopSql.Interfaces;
 
 namespace System.Data.RopSql
 {
-    public class RopSqlDataAdapter : Interfaces.IDataAdapter
+    public class RopSqlDataAdapter : Interfaces.IDataAdapter, IDisposable
     {
         #region Declarations
 
@@ -54,57 +54,62 @@ namespace System.Data.RopSql
 
             public virtual List<T> List<T>(T filterEntity, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, bool onlyListables, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, int recordLimit, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, string.Empty, null, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, List<int> primaryKeyFilters, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), primaryKeyFilters, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), primaryKeyFilters, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, List<int> primaryKeyFilters, bool getExclusion, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), primaryKeyFilters, 0, string.Empty, string.Empty, string.Empty, false, getExclusion, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), primaryKeyFilters, 0, string.Empty, null, string.Empty, string.Empty, false, getExclusion, false, false, loadComposition);
+            }
+
+            public List<T> List<T>(T filterEntity, Dictionary<string, double[]> rangeValues, bool loadComposition)
+            {
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, rangeValues, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, bool onlyListables, int recordLimit, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, string.Empty, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, string.Empty, null, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, string groupAttributes, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, groupAttributes, string.Empty, false, false, false, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, groupAttributes, string.Empty, false, false, false, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, string orderAttributes, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, string groupAttributes, string orderAttributes, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, string showAttributes, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
             {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, showAttributes, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, showAttributes, null, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
             public void DefineSearchFilter(object entity, string filter)
@@ -136,6 +141,12 @@ namespace System.Data.RopSql
             public void CancelTransaction()
             {
                 persistence.CancelTransaction();
+            }
+
+            public void Dispose()
+            {
+                persistence = null;
+                GC.ReRegisterForFinalize(this);
             }
 
         #endregion

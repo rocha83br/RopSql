@@ -10,6 +10,7 @@ namespace System.Data.RopSql.Interfaces
         int Delete(object filterEntity);
         List<T> List<T>(T filterEntity, bool loadComposition);
         List<T> List<T>(T filterEntity, int recordLimit, bool loadComposition);
+        List<T> List<T>(T filterEntity, Dictionary<string, double[]> rangeValues, bool loadComposition);
         List<T> List<T>(T filterEntity, string groupAttributes, bool loadComposition);
         List<T> List<T>(T filterEntity, string orderAttributes, bool orderDescending, bool loadComposition);
         List<T> List<T>(T filterEntity, string groupAttributes, string orderAttributes, bool orderDescending, bool loadComposition);

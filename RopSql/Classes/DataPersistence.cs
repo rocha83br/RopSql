@@ -14,7 +14,7 @@ using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
-    public class DataPersistence : DataBaseODBCConnection, IPersistence
+    public class DataPersistence : DataBaseOleDbConnection, IPersistence
     {
         #region Declarations
 
@@ -48,9 +48,8 @@ namespace System.Data.RopSql
                 sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
                                                   entityType,
                                                   (int)PersistenceAction.Create,
-                                                  null, null,
-                                                  false,
-                                                  emptyArray,
+                                                  null, null, false,
+                                                  emptyArray, null,
                                                   out commandParameters);
 
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
@@ -106,8 +105,8 @@ namespace System.Data.RopSql
             if (keepConnection || base.connect())
             {
                 sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
-                                                     entityType, (int)PersistenceAction.Edit,
-                                                     filterEntity, null, false, emptyArray, out commandParameters);
+                                                     entityType, (int)PersistenceAction.Edit, filterEntity, 
+                                                     null, false, emptyArray, null, out commandParameters);
 
                 recordsAffected = executeCommand(sqlInstruction, commandParameters);
             }
@@ -161,7 +160,7 @@ namespace System.Data.RopSql
                                              (int)PersistenceAction.Delete,
                                              Convert.ChangeType(filterEntity, entityType),
                                              null, false, emptyArray,
-                                             out commandParameters);
+                                             null, out commandParameters);
 
                 recordAffected = executeCommand(sqlInstruction, commandParameters);
             }
@@ -183,7 +182,7 @@ namespace System.Data.RopSql
             else
             {
                 var queryList = List(filterEntity, entityType, primaryKeyFilters, 0,
-                                string.Empty, string.Empty, string.Empty,
+                                string.Empty, null, string.Empty, string.Empty,
                                 false, false, false, true, loadComposition);
 
                 if (queryList.Count > 0) result = queryList[0];
@@ -192,7 +191,7 @@ namespace System.Data.RopSql
             return result;
         }
 
-        public List<T> List<T>(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
+        public List<T> List<T>(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
         {
             // Verificando cache
 
@@ -209,7 +208,7 @@ namespace System.Data.RopSql
             }
             else
             {
-                result = List(filterEntity, entityType, primaryKeyFilters, recordLimit, showAttributes, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
+                result = List(filterEntity, entityType, primaryKeyFilters, recordLimit, showAttributes, rangeValues, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
 
                 if (getTableAttrib(filterEntity).IsCacheable)
                     DataCache.Put(filterEntity, result);
@@ -218,7 +217,7 @@ namespace System.Data.RopSql
             return result as List<T>;
         }
 
-        public IList List(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
+        public IList List(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
         {
             string sqlInstruction = string.Empty;
             string[] displayAttributes = new string[0];
@@ -243,7 +242,7 @@ namespace System.Data.RopSql
                                          persistenceAction,
                                          Convert.ChangeType(filterEntity, entityType),
                                          primaryKeyFilters, getExclusion, displayAttributes,
-                                         out commandParameters);
+                                         rangeValues, out commandParameters);
 
             sqlInstruction = string.Format(sqlInstruction, recordLimit > 0 ? string.Format(SQLANSIRepository.DataPersistence_Action_LimitResult_MySQL, recordLimit) : string.Empty, "{0}", "{1}");
 
@@ -361,7 +360,7 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, out Dictionary<object, object> commandParameters)
+        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, Dictionary<string, double[]> rangeValues, out Dictionary<object, object> commandParameters)
         {
             string sqlInstruction = string.Empty;
             Dictionary<object, object> sqlFilterData;
@@ -393,8 +392,8 @@ namespace System.Data.RopSql
 
             Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData,
                                                                         showAttributes, keyColumnName, hashCode, 
-                                                                        (childHashColumn != null) ? childHashColumn.Name : hashColumnName, 
-                                                                        (primaryKeyFilters != null), getExclusion);
+                                                                        (childHashColumn != null) ? childHashColumn.Name : hashColumnName,
+                                                                        rangeValues, (primaryKeyFilters != null), getExclusion);
 
             switch(action)
             {
@@ -472,7 +471,7 @@ namespace System.Data.RopSql
 
                         setEntityHashKey(entityParent, child);
 
-                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
+                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, null, out commandParameters));
                     }
                     else
                     {
@@ -498,7 +497,7 @@ namespace System.Data.RopSql
                                     setEntityForeignKey(entityParent, listItem);
                                     setEntityHashKey(entityParent, listItem);
 
-                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, out commandParameters));
+                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, null, out commandParameters));
                                 }
                                 else
                                 {
@@ -521,7 +520,7 @@ namespace System.Data.RopSql
                                         childFiltersList.Add(existFilter);
                                     }
 
-                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, out commandParameters));
+                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, null, out commandParameters));
                                 }
                             }
                         }
@@ -575,7 +574,7 @@ namespace System.Data.RopSql
 
             string result = string.Empty;
             if (compositionFilter != null)
-                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, out commandParameters);
+                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, null, out commandParameters);
 
             return result;
         }
@@ -651,7 +650,7 @@ namespace System.Data.RopSql
 
                 setEntityHashKey(loadedEntity, genericAttributeInstance);
 
-                var genericAttributes = List(genericAttributeInstance, genericAttributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
+                var genericAttributes = List(genericAttributeInstance, genericAttributeInstance.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, false);
 
                 genericAttributesId = new List<int>();
 
@@ -786,7 +785,7 @@ namespace System.Data.RopSql
             return objectSQLDataRelation;
         }
 
-        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, string hashColumnName, bool multipleFilters, bool getExclusion)
+        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, string hashColumnName, Dictionary<string, double[]> rangeValues, bool multipleFilters, bool getExclusion)
         {
             var returnDictionary = new Dictionary<string, string>();
             var relationshipDictionary = new Dictionary<string, string>();
@@ -798,6 +797,7 @@ namespace System.Data.RopSql
             string columnFilterList = string.Empty;
             string relationList = string.Empty;
             string relation = string.Empty;
+            bool rangeFilter = false;
 
             foreach (var item in entitySqlData.Where(item => !item.Key.Equals("Class")))
             {
@@ -918,6 +918,7 @@ namespace System.Data.RopSql
                         object filterColumnName = null;
                         object filterColumnValue = null;
                         object columnName = null;
+                        string columnNameStr = string.Empty;
 
                         if (!(((KeyValuePair<object, object>)filter.Value).Key is RelationalColumn))
                         {
@@ -936,9 +937,16 @@ namespace System.Data.RopSql
                             }
                         }
 
-                        if ((filterColumnValue != null)
+                        if (rangeValues != null)
+                        {
+                            columnNameStr = columnName.ToString();
+                            rangeFilter = rangeValues.ContainsKey(columnNameStr);
+                        }
+
+                        if (((filterColumnValue != null)
                                 && (filterColumnValue.ToString() != SqlDefaultValue.Null)
                                 && (filterColumnValue.ToString() != SqlDefaultValue.Zero))
+                            || rangeFilter)
                         {
                             bool compareRule = (action == (int)PersistenceAction.List)
                                                    && !filterColumnName.ToString().ToLower().Contains("date")
@@ -949,40 +957,52 @@ namespace System.Data.RopSql
 
                             string comparation = string.Empty;
 
-                            if (!multipleFilters)
-                                comparation = (compareRule)
-                                              ? string.Format(SqlOperator.Contains, filterColumnValue.ToString().Replace("'", string.Empty))
-                                              : string.Concat(SqlOperator.Equal, filterColumnValue);
-                            else
+                            if (!rangeFilter)
                             {
-                                if (filterColumnValue.ToString().Contains(','))
-                                {
-                                    comparation = string.Format(SqlOperator.In, filterColumnValue);
-                                    if (getExclusion) comparation = string.Concat(SqlOperator.Not, comparation);
-                                }
+                                if (!multipleFilters)
+                                    comparation = (compareRule)
+                                                  ? string.Format(SqlOperator.Contains, filterColumnValue.ToString().Replace("'", string.Empty))
+                                                  : string.Concat(SqlOperator.Equal, filterColumnValue);
                                 else
                                 {
-                                    if (!getExclusion)
-                                        comparation = string.Concat(SqlOperator.Equal, filterColumnValue);
+                                    if (filterColumnValue.ToString().Contains(','))
+                                    {
+                                        comparation = string.Format(SqlOperator.In, filterColumnValue);
+                                        if (getExclusion) comparation = string.Concat(SqlOperator.Not, comparation);
+                                    }
                                     else
                                     {
-                                        if (columnName.Equals(keyColumnName))
-                                            comparation = string.Concat(SqlOperator.Different, filterColumnValue);
-                                        else
+                                        if (!getExclusion)
                                             comparation = string.Concat(SqlOperator.Equal, filterColumnValue);
+                                        else
+                                        {
+                                            if (columnName.Equals(keyColumnName))
+                                                comparation = string.Concat(SqlOperator.Different, filterColumnValue);
+                                            else
+                                                comparation = string.Concat(SqlOperator.Equal, filterColumnValue);
+                                        }
                                     }
                                 }
+
+                                if (filterColumnValue.Equals(true))
+                                    comparation = " = 1";
+
+                                if ((action == (int)PersistenceAction.Edit) && filterColumnValue.Equals(false))
+                                    comparation = " = 0";
+
+                                if (!filterColumnValue.Equals(false))
+                                    columnFilterList += filterColumnName + comparation +
+                                        ((compareRule) ? SqlOperator.Or : SqlOperator.And);
                             }
+                            else
+                            {
+                                double rangeFrom = rangeValues[columnNameStr][0];
+                                double rangeTo = rangeValues[columnNameStr][1];
 
-                            if (filterColumnValue.Equals(true))
-                                comparation = " = 1";
+                                comparation = string.Format(SqlOperator.Between, rangeFrom, rangeTo);
 
-                            if ((action == (int)PersistenceAction.Edit) && filterColumnValue.Equals(false))
-                                comparation = " = 0";
-
-                            if (!filterColumnValue.Equals(false))
-                                columnFilterList += filterColumnName + comparation +
-                                    ((compareRule) ? SqlOperator.Or : SqlOperator.And);
+                                columnFilterList += string.Concat(filterColumnName, " ", comparation, SqlOperator.And);
+                            }
                         }
                     }
                 }
@@ -1086,7 +1106,7 @@ namespace System.Data.RopSql
                             if (relationConfig.HashSigned)
                                 setEntityHashKey(loadedEntity, attributeInstance);
 
-                            attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, false);
+                            attributeInstance = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, false);
 
                             break;
                         case RelationCardinality.ManyToMany:
@@ -1098,7 +1118,7 @@ namespace System.Data.RopSql
                                 setEntityForeignKey(loadedEntity, attributeInstance);
                                 setEntityHashKey(loadedEntity, attributeInstance);
 
-                                var manyToRelations = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, string.Empty, string.Empty, false, false, false, false, true);
+                                var manyToRelations = List(attributeInstance, attributeInstance.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, true);
 
                                 Type childManyType = attribute.PropertyType.GetGenericArguments()[0];
                                 Type dynamicManyType = typeof(List<>).MakeGenericType(new Type[] { childManyType });
