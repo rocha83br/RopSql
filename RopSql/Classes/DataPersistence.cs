@@ -327,27 +327,29 @@ namespace System.Data.RopSql
             return (IList)returnList;
         }
 
-        public List<T> List<T>(object filterEntity, Type entityType, string procedureName)
+        public List<T> List<T>(object procParamsEntity, Type entityType)
         {
             // Verificando cache
 
             IList result = null;
 
-            if (DataCache.Get(filterEntity) != null)
+            if (DataCache.Get(procParamsEntity) != null)
             {
-                result = DataCache.Get(filterEntity) as IList;
+                result = DataCache.Get(procParamsEntity) as IList;
                 if (result == null)
                 {
                     result = new List<T>();
-                    result.Add((T)DataCache.Get(filterEntity));
+                    result.Add((T)DataCache.Get(procParamsEntity));
                 }
             }
             else
             {
-                result = List(filterEntity, entityType, procedureName);
+                var procAttribs = getProcAttrib(procParamsEntity);                
 
-                if (getTableAttrib(filterEntity).IsCacheable)
-                    DataCache.Put(filterEntity, result);
+                result = List(procParamsEntity, entityType, procAttribs.ProcedureName);
+
+                if (procAttribs.IsCacheable)
+                    DataCache.Put(procParamsEntity, result);
             }
 
             return result as List<T>;
@@ -1374,6 +1376,12 @@ namespace System.Data.RopSql
         {
             return entity.GetType().GetCustomAttributes(false)
                                    .SingleOrDefault(atb => atb is DataAnnotations.DataTable) as DataAnnotations.DataTable;
+        }
+
+        private DataAnnotations.DataProcedure getProcAttrib(object entity)
+        {
+            return entity.GetType().GetCustomAttributes(false)
+                                   .SingleOrDefault(atb => atb is DataAnnotations.DataProcedure) as DataAnnotations.DataProcedure;
         }
 
         private object parseManyToRelation(object childEntity, RelatedEntity relation)

@@ -17,6 +17,19 @@ namespace System.Data.RopSql.DataAnnotations
         public bool IsCacheable;
     }
 
+    public class DataProcedure : Attribute
+    {
+        public string ProcedureName;
+        public bool IsCacheable;
+        public ProcedureEngine Engine;
+    }
+
+    public enum ProcedureEngine
+    {
+        MySQL = 1,
+        SQLServer = 2
+    }
+
     public class DataColumn : Attribute, IDataColumn
     {
         #region Declarations

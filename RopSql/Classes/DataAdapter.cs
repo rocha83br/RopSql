@@ -57,6 +57,11 @@ namespace System.Data.RopSql
                 return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
+            public List<T> List<T>(T procParamsEntity)
+            {
+                return persistence.List<T>(procParamsEntity, procParamsEntity.GetType());
+            }
+
             public List<T> List<T>(T filterEntity, bool onlyListables, bool loadComposition)
             {
                 return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, onlyListables, false, false, false, loadComposition);
@@ -110,11 +115,6 @@ namespace System.Data.RopSql
             public List<T> List<T>(T filterEntity, string showAttributes, string groupAttributes, string orderAttributes, int recordLimit, bool orderDescending, bool loadComposition)
             {
                 return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, showAttributes, null, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
-            }
-
-            public List<T> List<T>(T filterEntity, string procedureName)
-            {
-                return persistence.List<T>(filterEntity, filterEntity.GetType(), procedureName);
             }
 
             public void DefineSearchFilter(object entity, string filter)
