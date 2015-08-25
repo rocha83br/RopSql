@@ -1,5 +1,6 @@
 using System;
 using System.Xml;
+using System.Text;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
-    public class DataPersistence : DataBaseOleDbConnection, IPersistence
+    public class DataPersistence : DataBaseODBCConnection, IPersistence
     {
         #region Declarations
 
@@ -322,6 +323,63 @@ namespace System.Data.RopSql
             if (loadComposition && (((IList)returnList).Count > 0))
                 for (int inC = 0; inC < ((IList)returnList).Count; inC++)
                     fillComposition(((IList)returnList)[inC], ((IList)returnList)[inC].GetType());
+
+            return (IList)returnList;
+        }
+
+        public List<T> List<T>(object filterEntity, Type entityType, string procedureName)
+        {
+            // Verificando cache
+
+            IList result = null;
+
+            if (DataCache.Get(filterEntity) != null)
+            {
+                result = DataCache.Get(filterEntity) as IList;
+                if (result == null)
+                {
+                    result = new List<T>();
+                    result.Add((T)DataCache.Get(filterEntity));
+                }
+            }
+            else
+            {
+                result = List(filterEntity, entityType, procedureName);
+
+                if (getTableAttrib(filterEntity).IsCacheable)
+                    DataCache.Put(filterEntity, result);
+            }
+
+            return result as List<T>;
+        }
+
+        public IList List(object filterEntity, Type entityType, string procedureName)
+        {
+            XmlDocument queryReturn = null;
+            string procCommand = string.Empty;
+            string procParameters = string.Empty;
+            Dictionary<object, object> columnParameters = null;
+            Dictionary<object, object> sqlEntityData = null;
+            int persistenceAction = (int)PersistenceAction.List;
+
+            Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
+            object returnList = Activator.CreateInstance(dynamicListType, true);
+
+            sqlEntityData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, persistenceAction, null, out columnParameters);
+
+            procParameters = getMySqlProcParams(sqlEntityData);
+
+            if (keepConnection || base.connect())
+            {
+                procedureName = string.Format(SQLANSIRepository.DataPersistence_Action_ExecuteProcedure_MySQL, procedureName);
+                procCommand = string.Concat(procedureName, procParameters);
+
+                queryReturn = base.executeQuery(procCommand);
+
+                returnList = parseDatabaseReturn(queryReturn, filterEntity.GetType());
+            }
+
+            if (!keepConnection) base.disconnect();
 
             return (IList)returnList;
         }
@@ -719,7 +777,7 @@ namespace System.Data.RopSql
             var objectSQLDataRelation = new Dictionary<object, object>();
             commandParameters = new Dictionary<object, object>();
 
-            objectSQLDataRelation.Add("Class", entityType.Name);
+            objectSQLDataRelation.Add("Class", entityType.Name); // Não trocar por 'c'lass, pois conflitará com o tipo class nativo .NET
 
             object[] classAnnotations = entityType.GetCustomAttributes(true);
 
@@ -799,115 +857,117 @@ namespace System.Data.RopSql
             string relation = string.Empty;
             bool rangeFilter = false;
 
-            foreach (var item in entitySqlData.Where(item => !item.Key.Equals("Class")))
-            {
-                relation = string.Empty;
-
-                if (item.Key.Equals("dataTable"))
+            if (entitySqlData != null)
+                foreach (var item in entitySqlData.Where(item => !item.Key.Equals("Class")))
                 {
-                    returnDictionary.Add(item.Key.ToString(), item.Value.ToString());
-                    tableName = item.Value.ToString().ToLower();
-                }
-                else if (((KeyValuePair<object, object>)item.Value).Key is RelationalColumn)
-                {
-                    RelationalColumn relationConfig = ((KeyValuePair<object, object>)item.Value).Key as RelationalColumn;
+                    relation = string.Empty;
 
-                    columnList += string.Format("{0}.{1} ", relationConfig.TableName.ToLower(), relationConfig.ColumnName);
-
-                    if (!string.IsNullOrEmpty(relationConfig.ColumnAlias))
-                        columnList += string.Format(SQLANSIRepository.DataPersistence_Action_ColumnName, relationConfig.ColumnAlias);
-
-                    columnList += ", ";
-
-                    if (relationConfig.JunctionType == RelationalJunctionType.Mandatory)
+                    if (item.Key.Equals("dataTable"))
                     {
-                        relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateMandatorily,
-                                                                relationConfig.TableName.ToLower(),
-                                                                string.Concat(tableName, ".", relationConfig.KeyColumn),
-                                                                string.Concat(relationConfig.TableName.ToLower(), ".",
-                                                                relationConfig.ForeignKeyColumn));
+                        returnDictionary.Add(item.Key.ToString(), item.Value.ToString());
+                        tableName = item.Value.ToString().ToLower();
                     }
-                    else
+                    else if (((KeyValuePair<object, object>)item.Value).Key is RelationalColumn)
                     {
-                        if (!string.IsNullOrEmpty(relationConfig.IntermediaryColumnName))
-                        {
-                            relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
-                                                     relationConfig.IntermediaryColumnName.ToLower(),
-                                                     string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
-                                                     string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".",
-                                                     relationConfig.ForeignKeyColumn));
+                        RelationalColumn relationConfig = ((KeyValuePair<object, object>)item.Value).Key as RelationalColumn;
 
-                            relation += string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
-                                                      relationConfig.TableName.ToLower(),
-                                                      string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".", relationConfig.KeyColumn),
-                                                      string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn));
+                        columnList += string.Format("{0}.{1} ", relationConfig.TableName.ToLower(), relationConfig.ColumnName);
+
+                        if (!string.IsNullOrEmpty(relationConfig.ColumnAlias))
+                            columnList += string.Format(SQLANSIRepository.DataPersistence_Action_ColumnName, relationConfig.ColumnAlias);
+
+                        columnList += ", ";
+
+                        if (relationConfig.JunctionType == RelationalJunctionType.Mandatory)
+                        {
+                            relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateMandatorily,
+                                                                    relationConfig.TableName.ToLower(),
+                                                                    string.Concat(tableName, ".", relationConfig.KeyColumn),
+                                                                    string.Concat(relationConfig.TableName.ToLower(), ".",
+                                                                    relationConfig.ForeignKeyColumn));
                         }
                         else
                         {
-                            relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
-                                                     relationConfig.TableName.ToLower(),
-                                                     string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
-                                                     string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.KeyColumn));
-                        }
-
-                        if (!string.IsNullOrEmpty(hashColumnName))
-                            relation += string.Format(" AND {0} = {1} ", hashColumnName, entityHash);
-                    }
-
-                    if (relation.Contains(relationList)
-                        || string.IsNullOrEmpty(relationList))
-                        relationList = relation;
-                    else if (!relationList.Contains(relation))
-                        relationList += relation;
-                }
-                else if (item.Key.Equals("RelatedEntity"))
-                {
-
-                }
-                else
-                {
-                    string entityAttributeName = item.Key.ToString();
-                    object entityColumnName = ((KeyValuePair<object, object>)item.Value).Key;
-                    object entityColumnValue = ((KeyValuePair<object, object>)item.Value).Value;
-
-                    switch (action)
-                    {
-                        case (int)PersistenceAction.Create:
-                            columnList += string.Format("{0}, ", entityColumnName);
-                            valueList += string.Format("{0}, ", entityColumnValue);
-
-                            break;
-                        case (int)PersistenceAction.List:
-                            if (showAttributes.Length > 0)
-                                for (int vC = 0; vC < showAttributes.Length; vC++)
-                                    showAttributes[vC] = showAttributes[vC].Trim();
-                            if ((showAttributes.Length == 0)
-                                || showAttributes.Length > 0 && Array.IndexOf(showAttributes, entityAttributeName) > -1)
-                                columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
-
-                            break;
-                        case (int)PersistenceAction.View:
-                            if (showAttributes.Length > 0)
-                                for (int vC = 0; vC < showAttributes.Length; vC++)
-                                    showAttributes[vC] = showAttributes[vC].Trim();
-                            if ((showAttributes.Length == 0)
-                                || showAttributes.Length > 0 && Array.IndexOf(showAttributes, entityAttributeName) > -1)
-                                columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
-
-                            break;
-                        default: // Alteração e Exclusão
-                            if (!entityAttributeName.ToLower().Equals("id"))
+                            if (!string.IsNullOrEmpty(relationConfig.IntermediaryColumnName))
                             {
-                                if (entityColumnValue == null)
-                                    entityColumnValue = SqlDefaultValue.Null;
+                                relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
+                                                         relationConfig.IntermediaryColumnName.ToLower(),
+                                                         string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
+                                                         string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".",
+                                                         relationConfig.ForeignKeyColumn));
 
-                                columnValueList += string.Format("{0} = {1}, ", entityColumnName, entityColumnValue);
+                                relation += string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
+                                                          relationConfig.TableName.ToLower(),
+                                                          string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".", relationConfig.KeyColumn),
+                                                          string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn));
+                            }
+                            else
+                            {
+                                relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
+                                                         relationConfig.TableName.ToLower(),
+                                                         string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
+                                                         string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.KeyColumn));
                             }
 
-                            break;
+                            if (!string.IsNullOrEmpty(hashColumnName))
+                                relation += string.Format(" AND {0} = {1} ", hashColumnName, entityHash);
+                        }
+
+                        if (relation.Contains(relationList)
+                            || string.IsNullOrEmpty(relationList))
+                            relationList = relation;
+                        else if (!relationList.Contains(relation))
+                            relationList += relation;
+                    }
+                    else if (item.Key.Equals("RelatedEntity"))
+                    {
+
+                    }
+                    else
+                    {
+                        string entityAttributeName = item.Key.ToString();
+                        object entityColumnName = ((KeyValuePair<object, object>)item.Value).Key;
+                        object entityColumnValue = ((KeyValuePair<object, object>)item.Value).Value;
+
+                        switch (action)
+                        {
+                            case (int)PersistenceAction.Create:
+                                columnList += string.Format("{0}, ", entityColumnName);
+                                valueList += string.Format("{0}, ", entityColumnValue);
+
+                                break;
+                            case (int)PersistenceAction.List:
+                                if ((showAttributes != null) && (showAttributes.Length > 0))
+                                    for (int vC = 0; vC < showAttributes.Length; vC++)
+                                        showAttributes[vC] = showAttributes[vC].Trim();
+                                if (((showAttributes == null) || (showAttributes.Length == 0))
+                                    || showAttributes.Length > 0 && Array.IndexOf(showAttributes, entityAttributeName) > -1)
+                                    columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
+
+                                break;
+                            case (int)PersistenceAction.View:
+                                if (showAttributes.Length > 0)
+                                    for (int vC = 0; vC < showAttributes.Length; vC++)
+                                        showAttributes[vC] = showAttributes[vC].Trim();
+                                if ((showAttributes.Length == 0)
+                                    || showAttributes.Length > 0 && Array.IndexOf(showAttributes, entityAttributeName) > -1)
+                                    columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
+
+                                break;
+                            default: // Alteração e Exclusão
+                                if (!entityAttributeName.ToLower().Equals("id"))
+                                {
+                                    if (entityColumnValue == null)
+                                        entityColumnValue = SqlDefaultValue.Null;
+
+                                    columnValueList += string.Format("{0} = {1}, ", entityColumnName, entityColumnValue);
+                                }
+
+                                break;
+                        }
                     }
                 }
-            }
+
             if (entitySqlFilter != null)
             {
                 foreach (var filter in entitySqlFilter)
@@ -1048,6 +1108,46 @@ namespace System.Data.RopSql
             }
 
             return returnDictionary;
+        }
+
+        private Dictionary<object, object> getSqlProcParams(Dictionary<object, object> entitySqlData)
+        {
+            var returnDictionary = new Dictionary<object, object>();
+
+            foreach (var prmVal in entitySqlData)
+                if (prmVal.Value.GetType().Name.StartsWith("KeyValuePair"))
+                {
+                    var dicVal = (KeyValuePair<object, object>)prmVal.Value;
+
+                    if (!dicVal.Value.ToString().Equals(SqlDefaultValue.FalseStr))
+                        returnDictionary.Add(dicVal.Key, dicVal.Value);
+                }
+
+            return returnDictionary;
+        }
+
+        private string getMySqlProcParams(Dictionary<object, object> entitySqlData)
+        {
+            var sqlStr = new StringBuilder();
+            var result = string.Empty;
+
+            sqlStr.Append("(");
+            foreach (var prmVal in entitySqlData)
+                if (prmVal.Value.GetType().Name.StartsWith("KeyValuePair"))
+                {
+                    var dicVal = (KeyValuePair<object, object>)prmVal.Value;
+
+                    if (!dicVal.Value.ToString().Equals(SqlDefaultValue.FalseStr))
+                    {
+                        var strVal = string.Concat(dicVal.Value, ", ");
+                        sqlStr.Append(strVal);
+                    }
+                }
+
+            result = sqlStr.ToString().Substring(0, sqlStr.Length - 2);
+            result = string.Concat(result, ")");
+
+            return result;
         }
 
         public void fillComposition(object loadedEntity, Type entityType)
@@ -1337,7 +1437,7 @@ namespace System.Data.RopSql
                 if (base.connection.State == ConnectionState.Open)
                     Delete(filterEntity, filterEntity.GetType());
 
-                throw;
+                throw ex;
             }
         }
 
@@ -1365,6 +1465,7 @@ namespace System.Data.RopSql
         public const string Null = "NULL";
         public const string Zero = "0";
         public const string False = "-1";
+        public const string FalseStr = "False";
 
         #endregion
     }

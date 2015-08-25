@@ -112,10 +112,10 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="DataPersistence_Action_ColumnName" xml:space="preserve">
     <value>AS {0} </value>
@@ -132,6 +132,14 @@
   <data name="DataPersistence_Action_Edit" xml:space="preserve">
     <value>UPDATE {0} SET {1} WHERE {2}</value>
     <comment>SQL ANSI Expression for data change</comment>
+  </data>
+  <data name="DataPersistence_Action_ExecuteProcedure" xml:space="preserve">
+    <value>EXEC {0}</value>
+    <comment>SQL Expression to execute a database procedure</comment>
+  </data>
+  <data name="DataPersistence_Action_ExecuteProcedure_MySQL" xml:space="preserve">
+    <value>CALL {0}</value>
+    <comment>SQL Expression to execute a database procedure in MySQL / Oracle</comment>
   </data>
   <data name="DataPersistence_Action_GetLastId" xml:space="preserve">
     <value>SELECT @@IDENTITY </value>

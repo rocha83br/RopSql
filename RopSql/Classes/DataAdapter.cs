@@ -112,6 +112,11 @@ namespace System.Data.RopSql
                 return persistence.List<T>(filterEntity, filterEntity.GetType(), null, recordLimit, showAttributes, null, groupAttributes, orderAttributes, false, false, orderDescending, false, loadComposition);
             }
 
+            public List<T> List<T>(T filterEntity, string procedureName)
+            {
+                return persistence.List<T>(filterEntity, filterEntity.GetType(), procedureName);
+            }
+
             public void DefineSearchFilter(object entity, string filter)
             {
                 persistence.DefineSearchFilter(entity, filter);

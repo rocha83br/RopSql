@@ -134,6 +134,48 @@ namespace System.Data.RopSql
             return executionReturn;
         }
 
+        protected XmlDocument executeProcedure(string procedureName, Dictionary<object, object> parameters)
+        {
+            SqlCommand sqlCommand = null;
+            SqlDataAdapter sqlAdapter = null;
+
+            DataSet dataTables = new DataSet();
+            StringBuilder xmlText = new StringBuilder();
+            XmlDocument returnStruct = new XmlDocument();
+
+            if (connection.State == System.Data.ConnectionState.Open)
+            {
+                XmlWriter xmlWriter = XmlWriter.Create(xmlText);
+
+                sqlCommand = connection.CreateCommand();
+                sqlCommand.CommandType = CommandType.StoredProcedure;
+                sqlCommand.CommandText = procedureName;
+
+                sqlCommand.Parameters.Clear();
+                foreach (var param in parameters)
+                {
+                    SqlParameter newSqlParameter = new SqlParameter(param.Key.ToString(), param.Value);
+                    sqlCommand.Parameters.Add(newSqlParameter);
+                }
+
+                if ((transactionControl != null)
+                        && (transactionControl.Connection != null))
+                    sqlCommand.Transaction = transactionControl;
+
+                sqlAdapter = new SqlDataAdapter(sqlCommand);
+
+                sqlAdapter.Fill(dataTables);
+
+                dataTables.WriteXml(xmlWriter);
+
+                returnStruct.LoadXml(xmlText.ToString());
+
+                sqlCommand = null;
+            }
+
+            return returnStruct;
+        }
+
         protected XmlDocument executeQuery(string sqlInstruction)
         {
             SqlCommand sqlCommand = null;
@@ -149,6 +191,7 @@ namespace System.Data.RopSql
 
                 sqlCommand = connection.CreateCommand();
                 sqlCommand.CommandText = sqlInstruction;
+                
                 if ((transactionControl != null)
                         && (transactionControl.Connection != null))
                     sqlCommand.Transaction = transactionControl;

@@ -83,7 +83,7 @@ namespace System.Data.RopSql
             }
             catch (Exception ex)
             {
-                throw;
+                throw ex; 
             }
         }
 
