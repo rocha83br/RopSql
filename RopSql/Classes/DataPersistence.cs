@@ -1283,6 +1283,20 @@ namespace System.Data.RopSql
                         columnValue = string.Concat("@", columnConfig.GetColumnName());
 
                         break;
+                    case DataType.Float:
+                        if (((float)columnValue == 0) && (!columnConfig.IsRequired()))
+                            columnValue = SqlDefaultValue.Null;
+                        else
+                            columnValue = columnValue.ToString().Replace(",", ".");
+
+                        break;
+                    case DataType.Double:
+                        if (((double)columnValue == 0) && (!columnConfig.IsRequired()))
+                            columnValue = SqlDefaultValue.Null;
+                        else
+                            columnValue = columnValue.ToString().Replace(",", ".");
+
+                        break;
                 }
             }
             else
@@ -1462,6 +1476,8 @@ namespace System.Data.RopSql
         public const string String = "System.String";
         public const string DateTime = "System.DateTime";
         public const string Binary = "System.Byte[]";
+        public const string Float = "System.Single";
+        public const string Double = "System.Double";
 
         #endregion
     }
