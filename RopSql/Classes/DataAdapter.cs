@@ -57,9 +57,9 @@ namespace System.Data.RopSql
                 return persistence.List<T>(filterEntity, filterEntity.GetType(), null, 0, string.Empty, null, string.Empty, string.Empty, false, false, false, false, loadComposition);
             }
 
-            public List<T> List<T>(T procParamsEntity)
+            public List<T> List<T>(object procParamsEntity, bool loadComposition)
             {
-                return persistence.List<T>(procParamsEntity, procParamsEntity.GetType());
+                return persistence.List<T>(procParamsEntity, procParamsEntity.GetType(), loadComposition);
             }
 
             public List<T> List<T>(T filterEntity, bool onlyListables, bool loadComposition)

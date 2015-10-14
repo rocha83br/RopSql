@@ -327,7 +327,7 @@ namespace System.Data.RopSql
             return (IList)returnList;
         }
 
-        public List<T> List<T>(object procParamsEntity, Type entityType)
+        public List<T> List<T>(object procParamsEntity, Type entityType, bool loadComposition)
         {
             // Verificando cache
 
@@ -344,9 +344,9 @@ namespace System.Data.RopSql
             }
             else
             {
-                var procAttribs = getProcAttrib(procParamsEntity);                
+                var procAttribs = getProcAttrib(procParamsEntity);
 
-                result = List(procParamsEntity, entityType, procAttribs.ProcedureName);
+                result = List(procParamsEntity, entityType, typeof(T), procAttribs.ProcedureName, loadComposition);
 
                 if (procAttribs.IsCacheable)
                     DataCache.Put(procParamsEntity, result);
@@ -355,7 +355,7 @@ namespace System.Data.RopSql
             return result as List<T>;
         }
 
-        public IList List(object filterEntity, Type entityType, string procedureName)
+        public IList List(object filterEntity, Type entityType, Type returnType, string procedureName, bool loadComposition)
         {
             XmlDocument queryReturn = null;
             string procCommand = string.Empty;
@@ -378,10 +378,16 @@ namespace System.Data.RopSql
 
                 queryReturn = base.executeQuery(procCommand);
 
-                returnList = parseDatabaseReturn(queryReturn, filterEntity.GetType());
+                returnList = parseDatabaseReturn(queryReturn, returnType);
             }
 
             if (!keepConnection) base.disconnect();
+
+            // Efetuando carga da composição quando existente (Eager Loading)
+
+            if (loadComposition && (((IList)returnList).Count > 0))
+                for (int inC = 0; inC < ((IList)returnList).Count; inC++)
+                    fillComposition(((IList)returnList)[inC], ((IList)returnList)[inC].GetType());
 
             return (IList)returnList;
         }
