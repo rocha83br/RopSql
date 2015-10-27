@@ -106,7 +106,7 @@ namespace System.Data.RopSql
             if (keepConnection || base.connect())
             {
                 sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
-                                                     entityType, (int)PersistenceAction.Edit, filterEntity, 
+                                                     entityType, (int)PersistenceAction.Edit, filterEntity,
                                                      null, false, emptyArray, null, out commandParameters);
 
                 recordsAffected = executeCommand(sqlInstruction, commandParameters);
@@ -169,7 +169,7 @@ namespace System.Data.RopSql
             if (!keepConnection) base.disconnect();
 
             if (getTableAttrib(filterEntity).IsCacheable)
-            DataCache.Del(filterEntity, true);
+                DataCache.Del(filterEntity, true);
 
             return recordAffected;
         }
@@ -441,7 +441,7 @@ namespace System.Data.RopSql
                 sqlFilterData = null;
 
             var keyColumn = EntityReflector.GetKeyColumn(entity, false).GetCustomAttributes(true)
-                                                                 .FirstOrDefault(cln => cln is DataAnnotations.DataColumn 
+                                                                 .FirstOrDefault(cln => cln is DataAnnotations.DataColumn
                                                                                      && ((IDataColumn)cln).IsPrimaryKey()) as DataAnnotations.DataColumn;
             string keyColumnName = string.Empty;
             if (keyColumn != null)
@@ -457,11 +457,11 @@ namespace System.Data.RopSql
             var hashColumnName = getEntityHashColumn(entity);
 
             Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData,
-                                                                        showAttributes, keyColumnName, hashCode, 
+                                                                        showAttributes, keyColumnName, hashCode,
                                                                         (childHashColumn != null) ? childHashColumn.Name : hashColumnName,
                                                                         rangeValues, (primaryKeyFilters != null), getExclusion);
 
-            switch(action)
+            switch (action)
             {
                 case (int)PersistenceAction.Create:
 
@@ -1319,7 +1319,12 @@ namespace System.Data.RopSql
 
             if (!string.IsNullOrEmpty(columnValue))
                 if (!columnDataType.Name.Contains("Nullable"))
+                {
+                    if (columnDataType.FullName.Equals("System.Double"))
+                        columnValue = columnValue.Replace(".", ",");
+
                     result = Convert.ChangeType(columnValue, columnDataType);
+                }
                 else
                     result = Convert.ChangeType(columnValue, Nullable.GetUnderlyingType(columnDataType));
 
