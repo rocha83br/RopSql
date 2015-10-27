@@ -1320,7 +1320,8 @@ namespace System.Data.RopSql
             if (!string.IsNullOrEmpty(columnValue))
                 if (!columnDataType.Name.Contains("Nullable"))
                 {
-                    if (columnDataType.FullName.Equals("System.Double"))
+                    if (columnDataType.FullName.Equals("System.Double")
+                        || columnDataType.FullName.Equals("System.Decimal"))
                         columnValue = columnValue.Replace(".", ",");
 
                     result = Convert.ChangeType(columnValue, columnDataType);
