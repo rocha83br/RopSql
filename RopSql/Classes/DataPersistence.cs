@@ -230,6 +230,8 @@ namespace System.Data.RopSql
             int persistenceAction = uniqueQuery ? (int)PersistenceAction.View
                                                 : (int)PersistenceAction.List;
 
+            var entityProps = entityType.GetProperties();
+
             Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
             object returnList = Activator.CreateInstance(dynamicListType, true);
 
@@ -256,7 +258,7 @@ namespace System.Data.RopSql
                 for (int cont = 0; cont < groupingAttributes.Length; cont++)
                     groupingAttributes[cont] = groupingAttributes[cont].Trim();
 
-                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, persistenceAction, null, out commandParameters);
+                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, out commandParameters);
 
                 foreach (var rel in attributeColumnRelation)
                     if (Array.IndexOf(groupingAttributes, rel.Key) > -1)
@@ -281,7 +283,7 @@ namespace System.Data.RopSql
             if (!string.IsNullOrEmpty(orderAttributes))
             {
                 ordinationAttributes = orderAttributes.Split(',');
-                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, persistenceAction, null, out commandParameters);
+                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, out commandParameters);
 
                 for (int contAtrib = 0; contAtrib < ordinationAttributes.Length; contAtrib++)
                 {
@@ -364,10 +366,12 @@ namespace System.Data.RopSql
             Dictionary<object, object> sqlEntityData = null;
             int persistenceAction = (int)PersistenceAction.List;
 
+            var entityProps = entityType.GetProperties();
+
             Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
             object returnList = Activator.CreateInstance(dynamicListType, true);
 
-            sqlEntityData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, persistenceAction, null, out columnParameters);
+            sqlEntityData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, out columnParameters);
 
             procParameters = getMySqlProcParams(sqlEntityData);
 
@@ -432,11 +436,12 @@ namespace System.Data.RopSql
             Dictionary<object, object> sqlFilterData;
 
             commandParameters = null;
+            var entityProps = entityType.GetProperties();
 
-            Dictionary<object, object> sqlEntityData = getAnnotationValueList(Convert.ChangeType(entity, entityType), entityType, action, primaryKeyFilters, out commandParameters);
+            Dictionary<object, object> sqlEntityData = getAnnotationValueList(Convert.ChangeType(entity, entityType), entityType, entityProps, action, primaryKeyFilters, out commandParameters);
 
             if (filterEntity != null)
-                sqlFilterData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, action, primaryKeyFilters, out commandParameters);
+                sqlFilterData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, action, primaryKeyFilters, out commandParameters);
             else
                 sqlFilterData = null;
 
@@ -449,16 +454,13 @@ namespace System.Data.RopSql
 
             var hashCode = getEntityHashCode(entity);
 
-            var childHashColumn = entityType.GetProperties().FirstOrDefault(prp => prp.GetCustomAttributes(true)
-                                                            .Any(an => an.GetType().GetInterface("IDataColumn") != null)
-                                                                    && ((IDataColumn)(prp.GetCustomAttributes(true)
-                                                            .FirstOrDefault(an => an.GetType().GetInterface("IDataColumn") != null))).IsHashSignature());
+            var childHashColumnName = getChildHashColumnName(entityProps);
 
-            var hashColumnName = getEntityHashColumn(entity);
+            var hashColumnName = getEntityHashColumnName(entityProps);
 
             Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData,
                                                                         showAttributes, keyColumnName, hashCode,
-                                                                        (childHashColumn != null) ? childHashColumn.Name : hashColumnName,
+                                                                        childHashColumnName ?? hashColumnName,
                                                                         rangeValues, (primaryKeyFilters != null), getExclusion);
 
             switch (action)
@@ -754,22 +756,30 @@ namespace System.Data.RopSql
 
             elementList = databaseReturn.GetElementsByTagName("Table");
 
+            var entityProps = entityType.GetProperties();
+
             foreach (XmlNode elem in elementList)
             {
                 returnEntity = Activator.CreateInstance(entityType, true);
 
-                foreach (XmlNode childElem in elem.ChildNodes)
+                foreach (PropertyInfo prop in entityProps)
                 {
-                    foreach (PropertyInfo prop in entityType.GetProperties())
-                    {
-                        if (prop.GetCustomAttributes(false).FirstOrDefault(ca => (ca is DataAnnotations.DataColumn
-                                                                                      && ((DataAnnotations.DataColumn)ca).ColumnName.Equals(childElem.Name))
-                                                                                      || (ca is RelationalColumn
-                                                                                             && (((((RelationalColumn)ca).ColumnName.Equals(childElem.Name)
-                                                                                                  && ((RelationalColumn)ca).ColumnAlias == null))
-                                                                                                 || (((RelationalColumn)ca).ColumnAlias != null
-                                                                                                 && ((RelationalColumn)ca).ColumnAlias.Equals(childElem.Name))))) != null)
+                    var propAttribs = prop.GetCustomAttributes(false);
 
+                    var dataColumnAttrib = propAttribs.FirstOrDefault(ca => ca.GetType().Name.Equals("DataColumn")) as DataAnnotations.DataColumn;
+                    var relColumnAttrib = propAttribs.FirstOrDefault(ca => ca.GetType().Name.Equals("RelationalColumn")) as DataAnnotations.RelationalColumn;
+
+                    foreach (XmlNode childElem in elem.ChildNodes)
+                    {
+                        var setValue = (dataColumnAttrib != null) && dataColumnAttrib.ColumnName.Equals(childElem.Name);
+
+                        setValue = setValue || ((relColumnAttrib != null)
+                                               && ((relColumnAttrib.ColumnName.Equals(childElem.Name)
+                                                  && (relColumnAttrib.ColumnAlias == null))
+                                                     || ((relColumnAttrib.ColumnAlias != null)
+                                                        && relColumnAttrib.ColumnAlias.Equals(childElem.Name))));
+
+                        if (setValue)
                             prop.SetValue(returnEntity, formatSQLOutputValue(childElem.InnerText, prop.PropertyType), null);
                     }
                 }
@@ -780,7 +790,7 @@ namespace System.Data.RopSql
             return (IList)returnList;
         }
 
-        private Dictionary<object, object> getAnnotationValueList(object entity, Type entityType, int action, List<int> primaryKeyFilters, out Dictionary<object, object> commandParameters)
+        private Dictionary<object, object> getAnnotationValueList(object entity, Type entityType, PropertyInfo[] entityProperties, int action, List<int> primaryKeyFilters, out Dictionary<object, object> commandParameters)
         {
             var objectSQLDataRelation = new Dictionary<object, object>();
             commandParameters = new Dictionary<object, object>();
@@ -795,9 +805,7 @@ namespace System.Data.RopSql
 
             PropertyInfo primaryKeyAttribute = EntityReflector.GetKeyColumn(entity, false);
 
-            PropertyInfo[] attributeList = entityType.GetProperties();
-
-            foreach (var attrib in attributeList)
+            foreach (var attrib in entityProperties)
             {
                 object[] attributeAnnotations = attrib.GetCustomAttributes(true);
 
@@ -1379,20 +1387,49 @@ namespace System.Data.RopSql
             return result;
         }
 
-        private string getEntityHashColumn(object entity)
+        private string getChildHashColumnName(PropertyInfo[] entityProperties)
+        {
+            string result = null;
+
+            var dataProps = entityProperties.Where(prp => prp.GetCustomAttributes(false)
+                                            .Any(an => an.GetType().Name.Equals("DataColumn")));
+
+            if (dataProps != null)
+            {
+                foreach (var prop in dataProps)
+                {
+                    var hashColumn = prop.GetCustomAttributes(false).FirstOrDefault() as DataAnnotations.DataColumn;
+
+                    if ((hashColumn != null) && hashColumn.IsHashSignature())
+                    {
+                        result = prop.Name;
+                        break;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private string getEntityHashColumnName(PropertyInfo[] entityProperties)
         {
             string result = string.Empty;
 
-            var hashColumn = entity.GetType().GetProperties().FirstOrDefault(prp => prp.GetCustomAttributes(true)
-                                                             .Any(an => an.GetType().GetInterface("IDataColumn") != null)
-                                                                     && ((IDataColumn)(prp.GetCustomAttributes(true)
-                                                             .FirstOrDefault(an => an.GetType().GetInterface("IDataColumn") != null))).GetHashColumn() != string.Empty);
+            var relProps = entityProperties.Where(prp => prp.GetCustomAttributes(false)
+                                           .Any(an => an.GetType().Name.Equals("RelationalColumn")));
 
-            if (hashColumn != null)
+            if (relProps != null)
             {
-                var hashName = ((IDataColumn)hashColumn.GetCustomAttributes(true)
-                                             .FirstOrDefault(an => an.GetType().GetInterface("IDataColumn") != null)).GetHashColumn();
-                result = hashName;
+                foreach (var prop in relProps)
+                {
+                    var hashColumn = prop.GetCustomAttributes(false).FirstOrDefault() as RelationalColumn;
+
+                    if (hashColumn != null)
+                        result = hashColumn.GetHashColumn();
+
+                    if (!string.IsNullOrEmpty(result))
+                        break;
+                }
             }
 
             return result;
