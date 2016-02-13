@@ -1500,7 +1500,7 @@ namespace System.Data.RopSql
 
                 DataCache.Del(entity, true);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (base.transactionControl != null)
                     base.CancelTransaction();
@@ -1508,7 +1508,7 @@ namespace System.Data.RopSql
                 if (base.connection.State == ConnectionState.Open)
                     Delete(filterEntity, filterEntity.GetType());
 
-                throw ex;
+                throw;
             }
         }
 

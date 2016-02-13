@@ -81,9 +81,9 @@ namespace System.Data.RopSql
                     updateCacheTree(cacheKey.GetType().GetHashCode(), cacheItem);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex; 
+                throw; 
             }
         }
 

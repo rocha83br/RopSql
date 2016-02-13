@@ -11,7 +11,7 @@ using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
-	public class DataBaseODBCConnection
+	public class DataBaseODBCConnection : IDisposable
     {
         #region Declarations
 
@@ -61,6 +61,22 @@ namespace System.Data.RopSql
                     this.transactionControl.Rollback();
             }
 
+            public void Dispose()
+            {
+                this.Dispose(false);
+            }
+
+            protected virtual void Dispose(bool managed)
+            {
+                connection.Dispose();
+                transactionControl.Dispose();
+
+                if (!managed)
+                    GC.SuppressFinalize(this);
+                else
+                    GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
+            }
+
         #endregion
 
         #region Helper Methods
@@ -92,6 +108,8 @@ namespace System.Data.RopSql
                 return (connection.State == ConnectionState.Closed);
             }
 
+            // Suppression defined because the input variable sqlInstruction could not be provided by user input, but only by the ropsql own entity parse methods
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
             protected int executeCommand(string sqlInstruction, Dictionary<object, object> parameters)
             {
                 OdbcCommand sqlCommand;
@@ -134,6 +152,8 @@ namespace System.Data.RopSql
                 return executionReturn;
             }
 
+            // Suppression defined because the input variable procedureName could not be provided by user input, but only by the ropsql own entity parse methods
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
             protected XmlDocument executeProcedure(string procedureName, Dictionary<object, object> parameters)
             {
                 OdbcCommand sqlCommand = null;
@@ -176,6 +196,8 @@ namespace System.Data.RopSql
                 return returnStruct;
             }
 
+            // Suppression defined because the input variable sqlInstruction could not be provided by user input, but only by the ropsql own entity parse methods
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
             protected XmlDocument executeQuery(string sqlInstruction)
             {
                 OdbcCommand sqlCommand = null;

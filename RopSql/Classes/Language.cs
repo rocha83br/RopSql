@@ -28,7 +28,15 @@ namespace System.Globalization.Language
 
         public void Dispose()
         {
-            GC.ReRegisterForFinalize(this);
+            this.Dispose(false);
+        }
+
+        protected virtual void Dispose(bool managed)
+        {
+            if (!managed)
+                GC.SuppressFinalize(this);
+            else
+                GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
         }
 
         #endregion   

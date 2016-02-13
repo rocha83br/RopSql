@@ -150,8 +150,17 @@ namespace System.Data.RopSql
 
             public void Dispose()
             {
+                this.Dispose(false);
+            }
+
+            protected virtual void Dispose(bool managed)
+            {
                 persistence = null;
-                GC.ReRegisterForFinalize(this);
+
+                if (!managed)
+                    GC.SuppressFinalize(this);
+                else
+                    GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
             }
 
         #endregion

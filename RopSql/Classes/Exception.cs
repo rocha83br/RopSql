@@ -8,6 +8,7 @@ using System.Data.RopSql.Resources;
 
 namespace System.Data.RopSql.Exceptions
 {
+    [Serializable]
     public sealed class ConnectionConfigurationNotFoundException : Exception
     {
         public ConnectionConfigurationNotFoundException(string cultureAcronym)
@@ -16,6 +17,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class DataSourceNotFoundException : Exception
     {
         public DataSourceNotFoundException(string cultureAcronym)
@@ -24,6 +26,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class InvalidConnectionCredentialsException : Exception
     {
         public InvalidConnectionCredentialsException(string cultureAcronym)
@@ -32,6 +35,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class SqlInstructionNotFoundException : Exception
     {
         public SqlInstructionNotFoundException(string cultureAcronym)
@@ -40,6 +44,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class InvalidPersistenceActionException : Exception
     {
         public InvalidPersistenceActionException(string cultureAcronym)
@@ -48,6 +53,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class AttributeNotListableException : Exception
     {
         public AttributeNotListableException(string cultureAcronym)
@@ -56,6 +62,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class RecordNotFoundException : Exception
     {
         public RecordNotFoundException(string cultureAcronym)
@@ -64,6 +71,7 @@ namespace System.Data.RopSql.Exceptions
         }
     }
 
+    [Serializable]
     public sealed class InvalidAttributeException : Exception
     {
         public InvalidAttributeException(string cultureAcronym)
