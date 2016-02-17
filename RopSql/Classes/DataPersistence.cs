@@ -1567,7 +1567,7 @@ namespace System.Data.RopSql
     {
         #region Declarations
 
-        public const string CompleteDateTime = "yyyy-MM-dd hh:mm:ss";
+        public const string CompleteDateTime = "yyyy-MM-dd HH:mm:ss";
         public const string NormalDate = "yyyy-MM-dd";
         public const string ShortDate = "yy-MM-dd";
 
