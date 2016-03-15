@@ -900,7 +900,7 @@ namespace System.Data.RopSql
                                                                     relationConfig.TableName.ToLower(),
                                                                     string.Concat(tableName, ".", relationConfig.KeyColumn),
                                                                     string.Concat(relationConfig.TableName.ToLower(), ".",
-                                                                    relationConfig.ForeignKeyColumn));
+                                                                    relationConfig.ForeignKeyColumn, " "));
                         }
                         else
                         {
@@ -915,7 +915,7 @@ namespace System.Data.RopSql
                                 relation += string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
                                                           relationConfig.TableName.ToLower(),
                                                           string.Concat(relationConfig.IntermediaryColumnName.ToLower(), ".", relationConfig.KeyColumn),
-                                                          string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn));
+                                                          string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn, " "));
                             }
                             else
                             {
