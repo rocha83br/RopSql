@@ -99,9 +99,9 @@ namespace System.Data.RopSql
         public int Edit(object entity, object filterEntity, Type entityType, bool persistComposition)
         {
             string sqlInstruction = string.Empty;
-            Dictionary<object, object> commandParameters = null;
-            int recordsAffected = 0;
+            Dictionary<object, object> commandParameters = new Dictionary<object, object>();
             List<string> childEntityCommands = new List<string>();
+            int recordsAffected = 0;
 
             if (keepConnection || base.connect())
             {
@@ -118,7 +118,6 @@ namespace System.Data.RopSql
                 DataCache.Del(entity, true);
 
             // Persistencia assincrona da composicao
-
             if (persistComposition)
             {
                 ParallelParam parallelParam = new ParallelParam()
@@ -151,19 +150,26 @@ namespace System.Data.RopSql
         public int Delete(object filterEntity, Type entityType)
         {
             string sqlInstruction = string.Empty;
-            Dictionary<object, object> commandParameters;
+            Dictionary<object, object> commandParameters = new Dictionary<object, object>();
             int recordAffected = 0;
+
+            var filterRef = Convert.ChangeType(filterEntity, entityType);
+
+            var composition = parseComposition(filterRef, entityType, (int)PersistenceAction.Delete, filterRef);
 
             if (keepConnection || base.connect())
             {
-                sqlInstruction = parseEntity(Convert.ChangeType(filterEntity, entityType),
-                                             entityType,
+                sqlInstruction = parseEntity(filterRef, entityType,
                                              (int)PersistenceAction.Delete,
                                              Convert.ChangeType(filterEntity, entityType),
                                              null, false, emptyArray,
                                              null, out commandParameters);
 
-                recordAffected = executeCommand(sqlInstruction, commandParameters);
+                if (composition.Any())
+                    foreach (var item in composition)
+                        recordAffected += executeCommand(item, commandParameters);
+
+                recordAffected += executeCommand(sqlInstruction, commandParameters);
             }
 
             if (!keepConnection) base.disconnect();
@@ -597,14 +603,13 @@ namespace System.Data.RopSql
                             var childInstance = Activator.CreateInstance(childListInstance.GetType().GetGenericArguments()[0]);
 
                             var childEntity = new object();
-                            if (relationAttrib.Cardinality == RelationCardinality.ManyToMany)
-                            {
+                            if (relationAttrib.Cardinality == RelationCardinality.ManyToMany)                          
                                 childEntity = parseManyToRelation(childInstance, relationAttrib);
-                                setEntityForeignKey(entityParent, childEntity);
-                                setEntityHashKey(entityParent, childEntity);
-                            }
                             else
                                 childEntity = childInstance;
+
+                            setEntityForeignKey(entityParent, childEntity);
+                            setEntityHashKey(entityParent, childEntity);
 
                             childFiltersList.Add(childEntity);
                         }
@@ -629,6 +634,7 @@ namespace System.Data.RopSql
             if (existentComposition.Count > 0)
             {
                 compositionFilter = Activator.CreateInstance(existentComposition[0].GetType());
+                setEntityForeignKey(entity, compositionFilter);
                 setEntityHashKey(entity, compositionFilter);
             }
 
