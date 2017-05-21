@@ -38,7 +38,7 @@ namespace System.Data.RopSql
 
         #region Public Methods
 
-        public int Create(object entity, Type entityType, bool persistComposition)
+        public int Create(object entity, Type entityType, bool persistComposition, bool forcePrimaryKey = false)
         {
             string sqlInstruction = string.Empty;
             Dictionary<object, object> commandParameters;
@@ -47,11 +47,11 @@ namespace System.Data.RopSql
             if (keepConnection || base.connect())
             {
                 sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
-                                                  entityType,
-                                                  (int)PersistenceAction.Create,
-                                                  null, null, false,
-                                                  emptyArray, null,
-                                                  out commandParameters);
+                                             entityType,
+                                             (int)PersistenceAction.Create,
+                                             null, null, false, emptyArray, 
+                                             null, forcePrimaryKey, 
+                                             out commandParameters);
 
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
 
@@ -107,7 +107,7 @@ namespace System.Data.RopSql
             {
                 sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
                                                      entityType, (int)PersistenceAction.Edit, filterEntity,
-                                                     null, false, emptyArray, null, out commandParameters);
+                                                     null, false, emptyArray, null, false, out commandParameters);
 
                 recordsAffected = executeCommand(sqlInstruction, commandParameters);
             }
@@ -163,7 +163,7 @@ namespace System.Data.RopSql
                                              (int)PersistenceAction.Delete,
                                              Convert.ChangeType(filterEntity, entityType),
                                              null, false, emptyArray,
-                                             null, out commandParameters);
+                                             null, false, out commandParameters);
 
                 if (composition.Any())
                     foreach (var item in composition)
@@ -251,7 +251,7 @@ namespace System.Data.RopSql
                                          persistenceAction,
                                          Convert.ChangeType(filterEntity, entityType),
                                          primaryKeyFilters, getExclusion, displayAttributes,
-                                         rangeValues, out commandParameters);
+                                         rangeValues, false, out commandParameters);
 
             sqlInstruction = string.Format(sqlInstruction, recordLimit > 0 ? string.Format(SQLANSIRepository.DataPersistence_Action_LimitResult_MySQL, recordLimit) : string.Empty, "{0}", "{1}");
 
@@ -264,7 +264,7 @@ namespace System.Data.RopSql
                 for (int cont = 0; cont < groupingAttributes.Length; cont++)
                     groupingAttributes[cont] = groupingAttributes[cont].Trim();
 
-                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, out commandParameters);
+                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out commandParameters);
 
                 foreach (var rel in attributeColumnRelation)
                     if (Array.IndexOf(groupingAttributes, rel.Key) > -1)
@@ -289,7 +289,7 @@ namespace System.Data.RopSql
             if (!string.IsNullOrEmpty(orderAttributes))
             {
                 ordinationAttributes = orderAttributes.Split(',');
-                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, out commandParameters);
+                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out commandParameters);
 
                 for (int contAtrib = 0; contAtrib < ordinationAttributes.Length; contAtrib++)
                 {
@@ -377,7 +377,7 @@ namespace System.Data.RopSql
             Type dynamicListType = typeof(List<>).MakeGenericType(new Type[] { entityType });
             object returnList = Activator.CreateInstance(dynamicListType, true);
 
-            sqlEntityData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, out columnParameters);
+            sqlEntityData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out columnParameters);
 
             procParameters = getMySqlProcParams(sqlEntityData);
 
@@ -436,7 +436,7 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, Dictionary<string, double[]> rangeValues, out Dictionary<object, object> commandParameters)
+        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, Dictionary<string, double[]> rangeValues, bool forcePrimaryKey, out Dictionary<object, object> commandParameters)
         {
             string sqlInstruction = string.Empty;
             Dictionary<object, object> sqlFilterData;
@@ -444,10 +444,10 @@ namespace System.Data.RopSql
             commandParameters = null;
             var entityProps = entityType.GetProperties();
 
-            Dictionary<object, object> sqlEntityData = getAnnotationValueList(Convert.ChangeType(entity, entityType), entityType, entityProps, action, primaryKeyFilters, out commandParameters);
+            Dictionary<object, object> sqlEntityData = getAnnotationValueList(Convert.ChangeType(entity, entityType), entityType, entityProps, action, primaryKeyFilters, forcePrimaryKey, out commandParameters);
 
             if (filterEntity != null)
-                sqlFilterData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, action, primaryKeyFilters, out commandParameters);
+                sqlFilterData = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, action, primaryKeyFilters, false, out commandParameters);
             else
                 sqlFilterData = null;
 
@@ -545,7 +545,7 @@ namespace System.Data.RopSql
 
                         setEntityHashKey(entityParent, child);
 
-                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, null, out commandParameters));
+                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, null, false, out commandParameters));
                     }
                     else
                     {
@@ -571,7 +571,7 @@ namespace System.Data.RopSql
                                     setEntityForeignKey(entityParent, listItem);
                                     setEntityHashKey(entityParent, listItem);
 
-                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, null, out commandParameters));
+                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, null, false, out commandParameters));
                                 }
                                 else
                                 {
@@ -594,7 +594,7 @@ namespace System.Data.RopSql
                                         childFiltersList.Add(existFilter);
                                     }
 
-                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, null, out commandParameters));
+                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, null, false, out commandParameters));
                                 }
                             }
                         }
@@ -648,7 +648,7 @@ namespace System.Data.RopSql
 
             string result = string.Empty;
             if (compositionFilter != null)
-                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, null, out commandParameters);
+                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, null, false, out commandParameters);
 
             return result;
         }
@@ -796,7 +796,7 @@ namespace System.Data.RopSql
             return (IList)returnList;
         }
 
-        private Dictionary<object, object> getAnnotationValueList(object entity, Type entityType, PropertyInfo[] entityProperties, int action, List<int> primaryKeyFilters, out Dictionary<object, object> commandParameters)
+        private Dictionary<object, object> getAnnotationValueList(object entity, Type entityType, PropertyInfo[] entityProperties, int action, List<int> primaryKeyFilters, bool forcePrimaryKey, out Dictionary<object, object> commandParameters)
         {
             var objectSQLDataRelation = new Dictionary<object, object>();
             commandParameters = new Dictionary<object, object>();
@@ -826,11 +826,9 @@ namespace System.Data.RopSql
 
                         var annotationRef = (DataAnnotations.DataColumn)annotation;
 
-                        if (!(action == (int)PersistenceAction.Create
-                            && (annotationRef).AutoNumbering))
+                        if ((!((action == (int)PersistenceAction.Create) && (annotationRef).AutoNumbering)) || forcePrimaryKey)
                         {
-                            if (primaryKeyFilters == null
-                                || ((primaryKeyFilters != null) && !annotationRef.Filterable))
+                            if (primaryKeyFilters == null || ((primaryKeyFilters != null) && !annotationRef.Filterable))
                             {
                                 sqlValueColumn = new KeyValuePair<object, object>(annotationRef.ColumnName, columnValue);
                                 objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);

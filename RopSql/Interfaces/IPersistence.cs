@@ -6,7 +6,7 @@ namespace System.Data.RopSql.Interfaces
 {
     public interface IPersistence
     {
-        int Create(object entity, Type entityType, bool persistComposition);
+        int Create(object entity, Type entityType, bool persistComposition, bool forcePrimaryKey = false);
         int Edit(object entity, object entityFilter, Type entityType, bool persistComposition);
         int Delete(object filterEntity, Type entityType);
         object Get(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition);
