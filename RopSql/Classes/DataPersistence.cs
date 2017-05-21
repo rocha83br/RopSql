@@ -228,11 +228,8 @@ namespace System.Data.RopSql
         {
             string sqlInstruction = string.Empty;
             string[] displayAttributes = new string[0];
-            string[] groupingAttributes = new string[0];
-            string[] ordinationAttributes = new string[0];
             Dictionary<object, object> attributeColumnRelation = null;
             Dictionary<object, object> commandParameters;
-            string columnList = string.Empty;
             int persistenceAction = uniqueQuery ? (int)PersistenceAction.View
                                                 : (int)PersistenceAction.List;
 
@@ -255,63 +252,15 @@ namespace System.Data.RopSql
 
             sqlInstruction = string.Format(sqlInstruction, recordLimit > 0 ? string.Format(SQLANSIRepository.DataPersistence_Action_LimitResult_MySQL, recordLimit) : string.Empty, "{0}", "{1}");
 
+            attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out commandParameters);
+
             if (!string.IsNullOrEmpty(groupAttributes))
-            {
-                string complementaryColumnList = string.Empty;
-
-                groupingAttributes = groupAttributes.Split(',');
-
-                for (int cont = 0; cont < groupingAttributes.Length; cont++)
-                    groupingAttributes[cont] = groupingAttributes[cont].Trim();
-
-                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out commandParameters);
-
-                foreach (var rel in attributeColumnRelation)
-                    if (Array.IndexOf(groupingAttributes, rel.Key) > -1)
-                        columnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
-                    else
-                        if ((!rel.Key.Equals("Class")) && (!rel.Key.Equals("DataTable")))
-                            complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
-
-                if (!String.IsNullOrEmpty(columnList) && Convert.ToInt32(columnList) > 2)
-                    columnList = columnList.Substring(0, columnList.Length - 2);
-                if (!String.IsNullOrEmpty(complementaryColumnList) && Convert.ToInt32(complementaryColumnList) > 2)
-                    complementaryColumnList = complementaryColumnList.Substring(0, complementaryColumnList.Length - 2);
-
-                sqlInstruction = string.Format(sqlInstruction,
-                                              string.Format(SQLANSIRepository.DataPersistence_Action_Group,
-                                                            columnList, ", ", complementaryColumnList),
-                                                            "{0}");
-            }
+                parseGroupingAttributes(attributeColumnRelation, groupAttributes, ref sqlInstruction);
             else
                 sqlInstruction = string.Format(sqlInstruction, string.Empty, "{0}");
 
             if (!string.IsNullOrEmpty(orderAttributes))
-            {
-                ordinationAttributes = orderAttributes.Split(',');
-                attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out commandParameters);
-
-                for (int contAtrib = 0; contAtrib < ordinationAttributes.Length; contAtrib++)
-                {
-                    ordinationAttributes[contAtrib] = ordinationAttributes[contAtrib].Trim();
-
-                    var attribToOrder = attributeColumnRelation.FirstOrDefault(rca => ordinationAttributes[contAtrib].Equals(rca.Key));
-                    var columnToOrder = ((KeyValuePair<object, object>)attribToOrder.Value).Key;
-
-                    if (!(columnToOrder is RelationalColumn))
-                        columnList = string.Concat(columnList, columnToOrder, ", ");
-                    else
-                        columnList = string.Concat(columnList, string.Format("{0}.{1}", ((RelationalColumn)columnToOrder).TableName.ToLower(),
-                                                                                        ((RelationalColumn)columnToOrder).ColumnName), ", ");
-                }
-
-                columnList = columnList.Substring(0, columnList.Length - 2);
-
-                sqlInstruction = string.Format(sqlInstruction,
-                                               string.Format(SQLANSIRepository.DataPersistence_Action_OrderResult,
-                                                             columnList,
-                                                             orderDescending ? "DESC" : "ASC"));
-            }
+                parseOrdinationAttributes(attributeColumnRelation, orderAttributes, orderDescending, ref sqlInstruction);
             else
                 sqlInstruction = string.Format(sqlInstruction, string.Empty, "{0}");
 
@@ -510,6 +459,60 @@ namespace System.Data.RopSql
             }
 
             return sqlInstruction;
+        }
+
+        private void parseGroupingAttributes(Dictionary<object, object> attributeColumnRelation, string groupAttributes, ref string sqlInstruction)
+        {
+            string columnList = string.Empty;
+            string complementaryColumnList = string.Empty;
+            string[] groupingAttributes = groupAttributes.Split(',');
+
+            for (int cont = 0; cont < groupingAttributes.Length; cont++)
+                groupingAttributes[cont] = groupingAttributes[cont].Trim();
+
+            foreach (var rel in attributeColumnRelation)
+                if (Array.IndexOf(groupingAttributes, rel.Key) > -1)
+                    columnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
+                else
+                    if ((!rel.Key.Equals("Class")) && (!rel.Key.Equals("DataTable")))
+                        complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
+
+            if (!String.IsNullOrEmpty(columnList) && Convert.ToInt32(columnList) > 2)
+                columnList = columnList.Substring(0, columnList.Length - 2);
+            if (!String.IsNullOrEmpty(complementaryColumnList) && Convert.ToInt32(complementaryColumnList) > 2)
+                complementaryColumnList = complementaryColumnList.Substring(0, complementaryColumnList.Length - 2);
+
+            sqlInstruction = string.Format(sqlInstruction,
+                                           string.Format(SQLANSIRepository.DataPersistence_Action_Group,
+                                                         columnList, ", ", complementaryColumnList),
+                                                         "{0}");
+        }
+
+        private void parseOrdinationAttributes(Dictionary<object, object> attributeColumnRelation, string orderAttributes, bool orderDescending, ref string sqlInstruction)
+        {
+            string columnList = string.Empty;
+            string[] ordinationAttributes = orderAttributes.Split(',');
+
+            for (int contAtrib = 0; contAtrib < ordinationAttributes.Length; contAtrib++)
+            {
+                ordinationAttributes[contAtrib] = ordinationAttributes[contAtrib].Trim();
+
+                var attribToOrder = attributeColumnRelation.FirstOrDefault(rca => ordinationAttributes[contAtrib].Equals(rca.Key));
+                var columnToOrder = ((KeyValuePair<object, object>)attribToOrder.Value).Key;
+
+                if (!(columnToOrder is RelationalColumn))
+                    columnList = string.Concat(columnList, columnToOrder, ", ");
+                else
+                    columnList = string.Concat(columnList, string.Format("{0}.{1}", ((RelationalColumn)columnToOrder).TableName.ToLower(),
+                                                                                    ((RelationalColumn)columnToOrder).ColumnName), ", ");
+            }
+
+            columnList = columnList.Substring(0, columnList.Length - 2);
+
+            sqlInstruction = string.Format(sqlInstruction,
+                                           string.Format(SQLANSIRepository.DataPersistence_Action_OrderResult,
+                                                         columnList,
+                                                         orderDescending ? "DESC" : "ASC"));
         }
 
         private List<string> parseComposition(object entity, Type entityType, int action, object filterEntity)
