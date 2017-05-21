@@ -50,10 +50,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\Database.cs" />
     <Compile Include="Classes\DatabaseCompact.cs" />
     <Compile Include="Classes\DataAnnotations.cs" />
     <Compile Include="Classes\DataAdapter.cs" />
-    <Compile Include="Classes\Database.cs" />
+    <Compile Include="Classes\DatabaseOleDb.cs" />
     <Compile Include="Classes\DatabaseODBC.cs" />
     <Compile Include="Classes\DataCache.cs" />
     <Compile Include="Classes\Exception.cs" />
@@ -82,7 +83,6 @@
   <ItemGroup>
     <Content Include="Libs\Newtonsoft.Json.dll" />
     <Content Include="Libs\System.Security.InMemProfile.dll" />
-    <Content Include="Libs\System.Security.InMemProfile.pdb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\MessageRepository.resx">

@@ -5,27 +5,26 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Data.RopSql.Resources;
 using System.Data.RopSql.Exceptions;
+using System.Security.InMemProfile;
 using System.Xml;
 using System.Text;
-using System.Data.SqlServerCe;
-using System.Security.InMemProfile;
 
 namespace System.Data.RopSql
 {
-    public class DataBaseCompactConnection : DataBase, IDisposable
+    public class DataBaseOleDbConnection : DataBase, IDisposable
     {
         #region Declarations
 
-        protected readonly SqlCeConnection connection;
-        protected SqlCeTransaction transactionControl;
+        protected readonly SqlConnection connection;
+        protected SqlTransaction transactionControl;
 
         #endregion
 
         #region Constructors
 
-        protected DataBaseCompactConnection() : base()
+        protected DataBaseOleDbConnection() : base()
         {
-            connection = new SqlCeConnection(connectionConfig);
+            connection = new SqlConnection(connectionConfig);
 
             transactionControl = null;
         }
@@ -56,7 +55,7 @@ namespace System.Data.RopSql
 
         public void Dispose()
         {
-            this.Dispose(false);
+            Dispose(false);
         }
 
         protected virtual void Dispose(bool managed)
@@ -105,7 +104,7 @@ namespace System.Data.RopSql
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
         protected int executeCommand(string sqlInstruction, Dictionary<object, object> parameters)
         {
-            SqlCeCommand sqlCommand;
+            SqlCommand sqlCommand;
             string insertCommand = SQLANSIRepository.DataPersistence_ReservedWord_INSERT;
 
             int executionReturn = 0;
@@ -121,7 +120,7 @@ namespace System.Data.RopSql
                 sqlCommand.Parameters.Clear();
                 foreach (var param in parameters)
                 {
-                    SqlCeParameter newSqlParameter = new SqlCeParameter(param.Key.ToString(), param.Value);
+                    SqlParameter newSqlParameter = new SqlParameter(param.Key.ToString(), param.Value);
                     sqlCommand.Parameters.Add(newSqlParameter);
                 }
 
@@ -149,8 +148,8 @@ namespace System.Data.RopSql
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
         protected XmlDocument executeProcedure(string procedureName, Dictionary<object, object> parameters)
         {
-            SqlCeCommand sqlCommand = null;
-            SqlCeDataAdapter sqlAdapter = null;
+            SqlCommand sqlCommand = null;
+            SqlDataAdapter sqlAdapter = null;
 
             DataSet dataTables = new DataSet();
             StringBuilder xmlText = new StringBuilder();
@@ -167,7 +166,7 @@ namespace System.Data.RopSql
                 sqlCommand.Parameters.Clear();
                 foreach (var param in parameters)
                 {
-                    SqlCeParameter newSqlParameter = new SqlCeParameter(param.Key.ToString(), param.Value);
+                    SqlParameter newSqlParameter = new SqlParameter(param.Key.ToString(), param.Value);
                     sqlCommand.Parameters.Add(newSqlParameter);
                 }
 
@@ -175,7 +174,7 @@ namespace System.Data.RopSql
                         && (transactionControl.Connection != null))
                     sqlCommand.Transaction = transactionControl;
 
-                sqlAdapter = new SqlCeDataAdapter(sqlCommand);
+                sqlAdapter = new SqlDataAdapter(sqlCommand);
 
                 sqlAdapter.Fill(dataTables);
 
@@ -193,8 +192,8 @@ namespace System.Data.RopSql
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
         protected XmlDocument executeQuery(string sqlInstruction)
         {
-            SqlCeCommand sqlCommand = null;
-            SqlCeDataAdapter sqlAdapter = null;
+            SqlCommand sqlCommand = null;
+            SqlDataAdapter sqlAdapter = null;
 
             DataSet dataTables = new DataSet();
             StringBuilder xmlText = new StringBuilder();
@@ -206,11 +205,12 @@ namespace System.Data.RopSql
 
                 sqlCommand = connection.CreateCommand();
                 sqlCommand.CommandText = sqlInstruction;
+                
                 if ((transactionControl != null)
                         && (transactionControl.Connection != null))
                     sqlCommand.Transaction = transactionControl;
 
-                sqlAdapter = new SqlCeDataAdapter(sqlCommand);
+                sqlAdapter = new SqlDataAdapter(sqlCommand);
 
                 sqlAdapter.Fill(dataTables);
 

@@ -11,12 +11,9 @@ using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
-	public class DataBaseODBCConnection : IDisposable
+	public class DataBaseODBCConnection : DataBase, IDisposable
     {
         #region Declarations
-
-	    readonly string connectionConfig;
-        readonly string cultureAcronym;
 
         protected readonly OdbcConnection connection;
         protected OdbcTransaction transactionControl;
@@ -25,13 +22,8 @@ namespace System.Data.RopSql
 
         #region Constructors
 
-        protected DataBaseODBCConnection()
+        protected DataBaseODBCConnection() : base()
         {
-            connectionConfig = new Encrypter().DecryptText(
-                               ConfigurationManager.ConnectionStrings["RopSqlConnStr"].ConnectionString);
-
-            cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
-
             connection = new OdbcConnection(connectionConfig);
 
             transactionControl = null;
@@ -72,7 +64,7 @@ namespace System.Data.RopSql
                 transactionControl.Dispose();
 
                 if (!managed)
-                    GC.SuppressFinalize(this);
+                    GC.ReRegisterForFinalize(this);
                 else
                     GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
             }
