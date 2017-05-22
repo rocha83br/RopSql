@@ -24,7 +24,7 @@ namespace System.Data.RopSql
 
         protected DataBaseODBCConnection() : base()
         {
-            connection = new OdbcConnection(connectionConfig);
+            connection = new OdbcConnection();
 
             transactionControl = null;
         }
@@ -73,17 +73,18 @@ namespace System.Data.RopSql
 
         #region Helper Methods
 
-            protected bool connect()
+            protected bool connect(string optionalConnConfig = "")
             {
-                if (!string.IsNullOrEmpty(this.connectionConfig))
+                if (!string.IsNullOrEmpty(this.connectionConfig) || !string.IsNullOrEmpty(optionalConnConfig))
                 {
-                    if (connection.State != ConnectionState.Open)
+                    if ((connection.State != ConnectionState.Open) && (connection.State != ConnectionState.Connecting))
                     {
-                        if (connection.State != ConnectionState.Connecting)
-                        {
+                        if (!string.IsNullOrEmpty(optionalConnConfig))
+                            connection.ConnectionString = optionalConnConfig;
+                        else
                             connection.ConnectionString = this.connectionConfig;
-                            connection.Open();
-                        }
+                            
+                        connection.Open();
                     }
                 }
                 else

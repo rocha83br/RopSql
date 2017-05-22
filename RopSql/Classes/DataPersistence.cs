@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Xml;
 using System.Text;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Configuration;
 using System.Threading;
+using Newtonsoft.Json;
 using System.Data.RopSql;
 using System.Data.RopSql.Interfaces;
 using System.Data.RopSql.Resources;
@@ -38,146 +40,19 @@ namespace System.Data.RopSql
 
         #region Public Methods
 
-        public int Create(object entity, Type entityType, bool persistComposition, bool forcePrimaryKey = false)
+        public int Create(object entity, Type entityType, bool persistComposition)
         {
-            string sqlInstruction = string.Empty;
-            Dictionary<object, object> commandParameters;
-            int lastInsertedId = 0;
-
-            if (keepConnection || base.connect())
-            {
-                sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
-                                             entityType,
-                                             (int)PersistenceAction.Create,
-                                             null, null, false, emptyArray, 
-                                             null, forcePrimaryKey, 
-                                             out commandParameters);
-
-                lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
-
-                // Atualizacao do Cache
-                var tableAttrib = getTableAttrib(entity);
-                if (tableAttrib.IsCacheable)
-                    DataCache.Del(entity, true);
-
-                // Persistencia assincrona da composicao
-
-                if (persistComposition)
-                {
-                    var entityColumnKey = EntityReflector.GetKeyColumn(entity, false);
-
-                    if (entityColumnKey != null)
-                        entityColumnKey.SetValue(entity, lastInsertedId, null);
-
-                    ParallelParam parallelParam = new ParallelParam()
-                    {
-                        Param1 = entity,
-                        Param2 = entityType,
-                        Param3 = (int)PersistenceAction.Create,
-                        Param4 = commandParameters
-                    };
-
-                    var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
-
-                    Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
-                    //parseCompositionAsync(parallelParam);
-                }
-                else
-                {
-                    if (!keepConnection) base.disconnect();
-
-                    // Atualizacao do Cache
-
-                    if (tableAttrib.IsCacheable)
-                        DataCache.Del(entity, true);
-                }
-            }
-
-            return lastInsertedId;
+            return createEntity(entity, entityType, persistComposition);
         }
 
         public int Edit(object entity, object filterEntity, Type entityType, bool persistComposition)
         {
-            string sqlInstruction = string.Empty;
-            Dictionary<object, object> commandParameters = new Dictionary<object, object>();
-            List<string> childEntityCommands = new List<string>();
-            int recordsAffected = 0;
-
-            if (keepConnection || base.connect())
-            {
-                sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
-                                                     entityType, (int)PersistenceAction.Edit, filterEntity,
-                                                     null, false, emptyArray, null, false, out commandParameters);
-
-                recordsAffected = executeCommand(sqlInstruction, commandParameters);
-            }
-
-            // Atualizacao do Cache
-            var tableAttrib = getTableAttrib(entity);
-            if (tableAttrib.IsCacheable)
-                DataCache.Del(entity, true);
-
-            // Persistencia assincrona da composicao
-            if (persistComposition)
-            {
-                ParallelParam parallelParam = new ParallelParam()
-                {
-                    Param1 = entity,
-                    Param2 = entityType,
-                    Param3 = (int)PersistenceAction.Edit,
-                    Param4 = commandParameters,
-                    Param5 = filterEntity
-                };
-
-                var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
-
-                Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
-                //parseCompositionAsync(parallelParam);
-            }
-            else
-            {
-                if (!keepConnection) base.disconnect();
-
-                // Atualizacao do Cache
-
-                if (tableAttrib.IsCacheable)
-                    DataCache.Del(filterEntity, true);
-            }
-
-            return recordsAffected;
+            return editEntity(entity, filterEntity, entityType, persistComposition);
         }
 
         public int Delete(object filterEntity, Type entityType)
         {
-            string sqlInstruction = string.Empty;
-            Dictionary<object, object> commandParameters = new Dictionary<object, object>();
-            int recordAffected = 0;
-
-            var filterRef = Convert.ChangeType(filterEntity, entityType);
-
-            var composition = parseComposition(filterRef, entityType, (int)PersistenceAction.Delete, filterRef);
-
-            if (keepConnection || base.connect())
-            {
-                sqlInstruction = parseEntity(filterRef, entityType,
-                                             (int)PersistenceAction.Delete,
-                                             Convert.ChangeType(filterEntity, entityType),
-                                             null, false, emptyArray,
-                                             null, false, out commandParameters);
-
-                if (composition.Any())
-                    foreach (var item in composition)
-                        recordAffected += executeCommand(item, commandParameters);
-
-                recordAffected += executeCommand(sqlInstruction, commandParameters);
-            }
-
-            if (!keepConnection) base.disconnect();
-
-            if (getTableAttrib(filterEntity).IsCacheable)
-                DataCache.Del(filterEntity, true);
-
-            return recordAffected;
+            return deleteEntity(filterEntity, entityType);
         }
 
         public object Get(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
@@ -193,6 +68,9 @@ namespace System.Data.RopSql
                                 false, false, false, true, loadComposition);
 
                 if (queryList.Count > 0) result = queryList[0];
+
+                if (getTableAttrib(filterEntity).IsCacheable)
+                    DataCache.Put(filterEntity, result);
             }
 
             return result;
@@ -384,6 +262,178 @@ namespace System.Data.RopSql
         #endregion
 
         #region Helper Methods
+
+        private int createEntity(object entity, Type entityType, bool persistComposition, bool isReplicating = false, string optionalConnConfig = "")
+        {
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> commandParameters;
+            int lastInsertedId = 0;
+
+            if (keepConnection || base.connect(optionalConnConfig))
+            {
+                sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
+                                             entityType,
+                                             (int)PersistenceAction.Create,
+                                             null, null, false, emptyArray,
+                                             null, isReplicating,
+                                             out commandParameters);
+
+                lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
+
+                // Atualizacao do Cache
+                var tableAttrib = getTableAttrib(entity);
+                if (tableAttrib.IsCacheable)
+                    DataCache.Del(entity, true);
+
+                // Persistencia assincrona da composicao e/ou replicas nos demais servidores
+                if (persistComposition || base.replicationEnabled)
+                {
+                    var entityColumnKey = EntityReflector.GetKeyColumn(entity, false);
+
+                    if (entityColumnKey != null)
+                        entityColumnKey.SetValue(entity, lastInsertedId, null);
+
+                    ParallelParam parallelParam = new ParallelParam()
+                    {
+                        Param1 = entity,
+                        Param2 = entityType,
+                        Param3 = (int)PersistenceAction.Create,
+                        Param4 = commandParameters,
+                        Param5 = persistComposition
+                    };
+
+                    if (persistComposition)
+                    {
+                        var compositionParallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
+
+                        Parallelizer.StartNewProcess(compositionParallelDelegate, parallelParam);
+                        //parseCompositionAsync(parallelParam); // Debug purposes
+                    }
+                    else
+                    {
+                        if (!keepConnection) base.disconnect();
+                    }
+
+                    if (!isReplicating)
+                    {
+                        var replicationParallelDelegate = new ParameterizedThreadStart(createReplicasAsync);
+
+                        Parallelizer.StartNewProcess(replicationParallelDelegate, parallelParam);
+                        //createReplicasAsync(parallelParam); // Debug purposes
+                    }
+                }
+            }
+
+            return lastInsertedId;
+        }
+
+        private int editEntity(object entity, object filterEntity, Type entityType, bool persistComposition, bool isReplicating = false, string optionalConnConfig = "")
+        {
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> commandParameters = new Dictionary<object, object>();
+            List<string> childEntityCommands = new List<string>();
+            int recordsAffected = 0;
+
+            if (keepConnection || base.connect(optionalConnConfig))
+            {
+                sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
+                                                     entityType, (int)PersistenceAction.Edit, filterEntity,
+                                                     null, false, emptyArray, null, false, out commandParameters);
+
+                recordsAffected = executeCommand(sqlInstruction, commandParameters);
+            }
+
+            // Atualizacao do Cache
+            var tableAttrib = getTableAttrib(filterEntity);
+            if (tableAttrib.IsCacheable)
+                DataCache.Del(filterEntity, true);
+
+            // Persistencia assincrona da composicao e/ou replica nos demais servidores
+            if (persistComposition || base.replicationEnabled)
+            {
+                ParallelParam parallelParam = new ParallelParam()
+                {
+                    Param1 = entity,
+                    Param2 = entityType,
+                    Param3 = (int)PersistenceAction.Edit,
+                    Param4 = commandParameters,
+                    Param5 = filterEntity,
+                    Param6 = persistComposition
+                };
+
+                if (persistComposition)
+                {
+                    var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
+
+                    Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
+                    //parseCompositionAsync(parallelParam); // Debug purposes
+                }
+                else
+                {
+                    if (!keepConnection) base.disconnect();
+                }
+
+                if (!isReplicating)
+                {
+                    var replicationParallelDelegate = new ParameterizedThreadStart(editReplicasAsync);
+
+                    Parallelizer.StartNewProcess(replicationParallelDelegate, parallelParam);
+                    //editReplicasAsync(parallelParam); // Debug purposes
+                }
+            }
+
+            return recordsAffected;
+        }
+
+        private int deleteEntity(object filterEntity, Type entityType, bool isReplicating = false, string optionalConnConfig = "")
+        {
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> commandParameters = new Dictionary<object, object>();
+            int recordAffected = 0;
+
+            var filterRef = Convert.ChangeType(filterEntity, entityType);
+
+            var composition = parseComposition(filterRef, entityType, (int)PersistenceAction.Delete, filterRef);
+
+            if (keepConnection || base.connect(optionalConnConfig))
+            {
+                sqlInstruction = parseEntity(filterRef, entityType,
+                                             (int)PersistenceAction.Delete,
+                                             Convert.ChangeType(filterEntity, entityType),
+                                             null, false, emptyArray,
+                                             null, false, out commandParameters);
+
+                if (composition.Any())
+                    foreach (var item in composition)
+                        recordAffected += executeCommand(item, commandParameters);
+
+                recordAffected += executeCommand(sqlInstruction, commandParameters);
+            }
+
+            if (getTableAttrib(filterEntity).IsCacheable)
+                DataCache.Del(filterEntity, true);
+
+            if (!keepConnection) base.disconnect();
+
+            if (base.replicationEnabled)
+            {
+                ParallelParam parallelParam = new ParallelParam()
+                {
+                    Param1 = filterEntity,
+                    Param2 = entityType
+                };
+
+                if (!isReplicating)
+                {
+                    var replicationParallelDelegate = new ParameterizedThreadStart(deleteReplicasAsync);
+
+                    Parallelizer.StartNewProcess(replicationParallelDelegate, parallelParam);
+                    //deleteReplicasAsync(parallelParam); // Debug purposes
+                }
+            }
+
+            return recordAffected;
+        }
 
         private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, Dictionary<string, double[]> rangeValues, bool forcePrimaryKey, out Dictionary<object, object> commandParameters)
         {
@@ -606,7 +656,7 @@ namespace System.Data.RopSql
                             var childInstance = Activator.CreateInstance(childListInstance.GetType().GetGenericArguments()[0]);
 
                             var childEntity = new object();
-                            if (relationAttrib.Cardinality == RelationCardinality.ManyToMany)                          
+                            if (relationAttrib.Cardinality == RelationCardinality.ManyToMany)
                                 childEntity = parseManyToRelation(childInstance, relationAttrib);
                             else
                                 childEntity = childInstance;
@@ -1504,10 +1554,11 @@ namespace System.Data.RopSql
                 if (!keepConnection) base.disconnect();
 
                 // Atualizacao do Cache
-
-                DataCache.Del(entity, true);
+                var tableAttrib = getTableAttrib(entity);
+                if (tableAttrib.IsCacheable)
+                    DataCache.Del(entity, true);
             }
-            catch (Exception)
+            catch(Exception ex)
             {
                 if (base.transactionControl != null)
                     base.CancelTransaction();
@@ -1515,8 +1566,78 @@ namespace System.Data.RopSql
                 if (base.connection.State == ConnectionState.Open)
                     Delete(filterEntity, filterEntity.GetType());
 
-                throw;
+                registerAsyncException("ParseComposition", ex, param);
             }
+        }
+
+        private void createReplicasAsync(object param)
+        {
+            try
+            {
+                foreach (var replicaConnConfig in base.replicaConnectionsConfig)
+                {
+                    ParallelParam parallelParam = param as ParallelParam;
+
+                    object entity = parallelParam.Param1;
+                    Type entityType = parallelParam.Param2 as Type;
+                    bool persistComposition = (bool)parallelParam.Param5;
+
+                    createEntity(entity, entityType, persistComposition, true, replicaConnConfig);
+                }
+            }
+            catch (Exception ex)
+            {
+                registerAsyncException("CreateReplicas", ex, param);
+            }
+        }
+
+        private void editReplicasAsync(object param)
+        {
+            try
+            {
+                foreach (var replicaConnConfig in base.replicaConnectionsConfig)
+                {
+                    ParallelParam parallelParam = param as ParallelParam;
+
+                    object entity = parallelParam.Param1;
+                    Type entityType = parallelParam.Param2 as Type;
+                    object filterEntity = parallelParam.Param5;
+                    bool persistComposition = (bool)parallelParam.Param6;
+
+                    editEntity(entity, filterEntity, entityType, persistComposition, true, replicaConnConfig);
+                }
+            }
+            catch (Exception ex)
+            {
+                registerAsyncException("EditReplicas", ex, param);
+            }
+        }
+
+        private void deleteReplicasAsync(object param)
+        {
+            try
+            {
+                foreach (var replicaConnConfig in base.replicaConnectionsConfig)
+                {
+                    ParallelParam parallelParam = param as ParallelParam;
+
+                    object filterEntity = parallelParam.Param1;
+                    Type entityType = parallelParam.Param2 as Type;
+
+                    deleteEntity(filterEntity, entityType, true, replicaConnConfig);
+                }
+            }
+            catch (Exception ex)
+            {
+                registerAsyncException("DeleteReplicas", ex, param);
+            }
+        }
+
+        protected void registerAsyncException(string operationName, Exception exception, object content)
+        {
+            var logFileName = string.Format("{0}\\{1}_{2}_{3}.log", base.logPath, operationName, content.GetHashCode(), DateTime.Now.Ticks);
+            var exceptionContent = string.Format("Exception : {0}{1}{2} Content : {3}", JsonConvert.SerializeObject(exception), Environment.NewLine, Environment.NewLine, JsonConvert.SerializeObject(content));
+            File.WriteAllText(logFileName, exceptionContent);
         }
 
         #endregion
