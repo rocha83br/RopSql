@@ -166,7 +166,7 @@
     <comment>SQL ANSI Expression for data ordination</comment>
   </data>
   <data name="DataPersistence_Action_Query" xml:space="preserve">
-    <value>SELECT {0} {1} FROM {2} {3} WHERE {4} {5} {6} {7}</value>
+    <value>SELECT {0} FROM {1} {2} WHERE {3} {4} {5} {6}</value>
     <comment>SQL ANSI Expression for data query</comment>
   </data>
   <data name="DataPersistence_Action_RangeFilter" xml:space="preserve">

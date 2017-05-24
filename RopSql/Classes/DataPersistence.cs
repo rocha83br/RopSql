@@ -55,6 +55,11 @@ namespace System.Data.RopSql
             return deleteEntity(filterEntity, entityType);
         }
 
+        public T Get<T>(T filterEntity, List<int> primaryKeyFilters, bool loadComposition) where T : class
+        {
+            return Get(filterEntity, typeof(T), primaryKeyFilters, loadComposition) as T;
+        }
+
         public object Get(object filterEntity, Type entityType, List<int> primaryKeyFilters, bool loadComposition)
         {
             object result = null;
@@ -76,7 +81,7 @@ namespace System.Data.RopSql
             return result;
         }
 
-        public List<T> List<T>(object filterEntity, Type entityType, List<int> primaryKeyFilters, int recordLimit, string showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition)
+        public List<T> List<T>(T filterEntity, List<int> primaryKeyFilters, int recordLimit, string showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition) where T : class
         {
             // Verificando cache
 
@@ -93,7 +98,7 @@ namespace System.Data.RopSql
             }
             else
             {
-                result = List(filterEntity, entityType, primaryKeyFilters, recordLimit, showAttributes, rangeValues, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
+                result = List(filterEntity, typeof(T), primaryKeyFilters, recordLimit, showAttributes, rangeValues, groupAttributes, orderAttributes, onlyListableAttributes, getExclusion, orderDescending, uniqueQuery, loadComposition);
 
                 if (getTableAttrib(filterEntity).IsCacheable)
                     DataCache.Put(filterEntity, result);
@@ -162,7 +167,7 @@ namespace System.Data.RopSql
             return (IList)returnList;
         }
 
-        public List<T> List<T>(object procParamsEntity, Type entityType, bool loadComposition)
+        public List<T> List<T>(object procParamsEntity, Type entityType, bool loadComposition) where T : class
         {
             // Verificando cache
 
@@ -227,6 +232,42 @@ namespace System.Data.RopSql
                     fillComposition(((IList)returnList)[inC], ((IList)returnList)[inC].GetType());
 
             return (IList)returnList;
+        }
+
+        public int GetMax<T>()
+        {
+            int returnValue = 0;
+            XmlDocument queryReturn = null;
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> commandParameters;
+            int persistenceAction = (int)PersistenceAction.Aggregation;
+
+            var entity = Activator.CreateInstance<T>();
+            var entityType = typeof(T);
+            var entityProps = entityType.GetProperties();
+
+            // Montando instrução de consulta
+
+            sqlInstruction = parseEntity(entity, entityType, persistenceAction, entity,
+                                         null, false, null, null, false, out commandParameters);
+
+            if (keepConnection || base.connect())
+            {
+                // Tratando retorno do banco
+
+                queryReturn = base.executeQuery(sqlInstruction);
+
+                var returnList = parseDatabaseReturn(queryReturn, entityType);
+            }
+
+            if (!keepConnection) base.disconnect();
+
+            return returnValue;
+        }
+
+        public int Count<T>()
+        {
+            throw new NotImplementedException();
         }
 
         public void DefineSearchFilter(object entity, string filter)
@@ -498,12 +539,11 @@ namespace System.Data.RopSql
                 default: // Listagem ou Consulta
 
                     sqlInstruction = String.Format(SQLANSIRepository.DataPersistence_Action_Query,
-                                                   "{0}",
                                                    sqlParameters["columnList"],
                                                    sqlParameters["dataTable"],
                                                    sqlParameters["relationList"],
                                                    sqlParameters["columnFilterList"],
-                                                   "{1}", "{2}", string.Empty);
+                                                   "{0}", "{1}", string.Empty);
 
                     break;
             }
@@ -870,10 +910,11 @@ namespace System.Data.RopSql
 
                 foreach (object annotation in attributeAnnotations.Where(ca => ca is IDataColumn))
                 {
+                    Type annotationType = annotation.GetType();
                     object columnValue = attrib.GetValue(Convert.ChangeType(entity, entityType), null);
                     columnValue = formatSQLInputValue(columnValue, action, (IDataColumn)annotation, commandParameters);
 
-                    if (annotation.GetType().Name.Equals("DataColumn"))
+                    if (annotationType.Name.Equals("DataColumn"))
                     {
                         object sqlValueColumn = null;
 
@@ -904,10 +945,19 @@ namespace System.Data.RopSql
                             }
                         }
                     }
-                    else if (annotation.GetType().Name.Equals("RelationalColumn")
+                    else if (annotationType.Name.Equals("RelationalColumn")
                             && ((action == (int)PersistenceAction.List) || (action == (int)PersistenceAction.View)))
                     {
                         object sqlValueColumn = new KeyValuePair<object, object>((RelationalColumn)annotation, columnValue);
+                        objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);
+                    }
+                }
+
+                foreach (DataAggregationColumn annotation in attributeAnnotations.Where(ca => ca is DataAggregationColumn))
+                {
+                    if (action == (int)PersistenceAction.Aggregation)
+                    {
+                        object sqlValueColumn = new KeyValuePair<object, object>(annotation, null);
                         objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);
                     }
                 }
@@ -991,6 +1041,15 @@ namespace System.Data.RopSql
                             relationList = relation;
                         else if (!relationList.Contains(relation))
                             relationList += relation;
+                    }
+                    else if (((KeyValuePair<object, object>)item.Value).Key is DataAggregationColumn)
+                    {
+                        var annotation = ((KeyValuePair<object, object>)item.Value).Key as DataAggregationColumn;
+                        
+                        if (annotation.AggregationType == DataAggregationType.Maximum)
+                            columnList += string.Format("MAX({0}.{1}) AS {2}, ", tableName, annotation.ColumnName, annotation.ColumnAlias);
+                        else if (annotation.AggregationType == DataAggregationType.Count)
+                            columnList += string.Format("COUNT({0}.{1}) AS {2}, ", tableName, annotation.ColumnName, annotation.ColumnAlias);
                     }
                     else if (item.Key.Equals("RelatedEntity"))
                     {
@@ -1152,7 +1211,8 @@ namespace System.Data.RopSql
             else
             {
                 if ((action == (int)PersistenceAction.List)
-                    || (action == (int)PersistenceAction.View))
+                    || (action == (int)PersistenceAction.View)
+                    || (action == (int)PersistenceAction.Aggregation))
                 {
                     columnList = columnList.Substring(0, columnList.Length - 2);
                     returnDictionary.Add("columnList", columnList);
@@ -1710,7 +1770,8 @@ namespace System.Data.RopSql
         Edit = 2,
         Delete = 3,
         List = 4,
-        View = 5
+        View = 5,
+        Aggregation = 6
 
         #endregion
     }
