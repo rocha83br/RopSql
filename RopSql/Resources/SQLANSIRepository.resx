@@ -121,6 +121,10 @@
     <value>AS {0} </value>
     <comment>SQL ANSI Expression to set column alias</comment>
   </data>
+  <data name="DataPersistence_Action_CountAggregation" xml:space="preserve">
+    <value>COUNT({0}.{1}) AS {2}, </value>
+    <comment>SQL ANSI Reserved word for count aggregation query</comment>
+  </data>
   <data name="DataPersistence_Action_Create" xml:space="preserve">
     <value>INSERT INTO {0} ({1}) VALUES ({2}) </value>
     <comment>SQL ANSI Expression for data creation</comment>
@@ -157,6 +161,14 @@
     <value>LIMIT {0}</value>
     <comment>SQL Expression to limit the number of result registers in MySQL / Oracle</comment>
   </data>
+  <data name="DataPersistence_Action_MaximumAggregation" xml:space="preserve">
+    <value>MAX({0}.{1}) AS {2}, </value>
+    <comment>SQL ANSI Reserved word for maximum aggregation query</comment>
+  </data>
+  <data name="DataPersistence_Action_MinimumAggregation" xml:space="preserve">
+    <value>MIN({0}.{1}) AS {2}, </value>
+    <comment>SQL ANSI Reserved word for minimum aggregation query</comment>
+  </data>
   <data name="DataPersistence_Action_MultipleFilter" xml:space="preserve">
     <value>IN ({0})</value>
     <comment>SQL ANSI Expression to query data with multiple criteria</comment>
@@ -180,6 +192,10 @@
   <data name="DataPersistence_Action_RelationateOptionally" xml:space="preserve">
     <value> LEFT JOIN {0} ON {1} = {2} </value>
     <comment>SQL ANSI Expressio to relation data optionally</comment>
+  </data>
+  <data name="DataPersistence_Action_SummaryAggregation" xml:space="preserve">
+    <value>SUM({0}.{1}) AS {2}, </value>
+    <comment>SQL ANSI Reserved word for summary aggregation query</comment>
   </data>
   <data name="DataPersistence_ReservedWord_INSERT" xml:space="preserve">
     <value>INSERT</value>

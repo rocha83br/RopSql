@@ -81,7 +81,7 @@ namespace System.Data.RopSql
             return result;
         }
 
-        public List<T> List<T>(T filterEntity, List<int> primaryKeyFilters, int recordLimit, string showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition) where T : class
+        public IList<T> List<T>(T filterEntity, List<int> primaryKeyFilters, int recordLimit, string showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, string orderAttributes, bool onlyListableAttributes, bool getExclusion, bool orderDescending, bool uniqueQuery, bool loadComposition) where T : class
         {
             // Verificando cache
 
@@ -131,7 +131,7 @@ namespace System.Data.RopSql
                                          persistenceAction,
                                          Convert.ChangeType(filterEntity, entityType),
                                          primaryKeyFilters, getExclusion, displayAttributes,
-                                         rangeValues, false, out commandParameters);
+                                         rangeValues, groupAttributes, false, out commandParameters);
 
             sqlInstruction = string.Format(sqlInstruction, recordLimit > 0 ? string.Format(SQLANSIRepository.DataPersistence_Action_LimitResult_MySQL, recordLimit) : string.Empty, "{0}", "{1}");
 
@@ -145,7 +145,7 @@ namespace System.Data.RopSql
             if (!string.IsNullOrEmpty(orderAttributes))
                 parseOrdinationAttributes(attributeColumnRelation, orderAttributes, orderDescending, ref sqlInstruction);
             else
-                sqlInstruction = string.Format(sqlInstruction, string.Empty, "{0}");
+                sqlInstruction = string.Format(sqlInstruction, string.Empty);
 
             if (keepConnection || base.connect())
             {
@@ -167,7 +167,7 @@ namespace System.Data.RopSql
             return (IList)returnList;
         }
 
-        public List<T> List<T>(object procParamsEntity, Type entityType, bool loadComposition) where T : class
+        public IList<T> List<T>(object procParamsEntity, Type entityType, bool loadComposition) where T : class
         {
             // Verificando cache
 
@@ -240,7 +240,7 @@ namespace System.Data.RopSql
             XmlDocument queryReturn = null;
             string sqlInstruction = string.Empty;
             Dictionary<object, object> commandParameters;
-            int persistenceAction = (int)PersistenceAction.Aggregation;
+            int persistenceAction = (int)PersistenceAction.ViewMax;
 
             var entity = Activator.CreateInstance<T>();
             var entityType = typeof(T);
@@ -249,7 +249,9 @@ namespace System.Data.RopSql
             // Montando instrução de consulta
 
             sqlInstruction = parseEntity(entity, entityType, persistenceAction, entity,
-                                         null, false, null, null, false, out commandParameters);
+                                         null, false, null, null, null, false, out commandParameters);
+
+            sqlInstruction = string.Format(sqlInstruction, string.Empty, string.Empty);
 
             if (keepConnection || base.connect())
             {
@@ -258,6 +260,9 @@ namespace System.Data.RopSql
                 queryReturn = base.executeQuery(sqlInstruction);
 
                 var returnList = parseDatabaseReturn(queryReturn, entityType);
+
+                if ((returnList != null) && (returnList.Count > 0))
+                    returnValue = ((IRopSqlEntity)returnList[0]).MaxId;
             }
 
             if (!keepConnection) base.disconnect();
@@ -265,9 +270,56 @@ namespace System.Data.RopSql
             return returnValue;
         }
 
+        public IList<T> Count<T>(T filterEntity, string groupAttributes)
+        {
+            IList<T> returnList = null;
+            XmlDocument queryReturn = null;
+            string sqlInstruction = string.Empty;
+            Dictionary<object, object> attributeColumnRelation = null;
+            Dictionary<object, object> commandParameters;
+            int persistenceAction = (int)PersistenceAction.Count;
+
+            var entity = Activator.CreateInstance<T>();
+            var entityType = typeof(T);
+            var entityProps = entityType.GetProperties();
+
+            if (filterEntity == null)
+                filterEntity = Activator.CreateInstance<T>();
+
+            // Montando instrução de consulta
+
+            sqlInstruction = parseEntity(entity, entityType, persistenceAction, filterEntity,
+                                         null, false, null, null, groupAttributes, false, out commandParameters);
+
+            attributeColumnRelation = getAnnotationValueList(Convert.ChangeType(filterEntity, entityType), entityType, entityProps, persistenceAction, null, false, out commandParameters);
+
+            if (!string.IsNullOrEmpty(groupAttributes))
+            {
+                parseGroupingAttributes(attributeColumnRelation, groupAttributes, ref sqlInstruction);
+                sqlInstruction = string.Format(sqlInstruction, string.Empty);
+            }
+            else
+                sqlInstruction = string.Format(sqlInstruction, string.Empty, string.Empty);
+
+            if (keepConnection || base.connect())
+            {
+                // Tratando retorno do banco
+
+                queryReturn = base.executeQuery(sqlInstruction);
+
+                returnList = parseDatabaseReturn(queryReturn, entityType) as List<T>;
+            }
+
+            if (!keepConnection) base.disconnect();
+
+            return returnList;
+        }
+
         public int Count<T>()
         {
-            throw new NotImplementedException();
+            var countResult = Count<T>(default(T), string.Empty);
+
+            return ((IRopSqlEntity)countResult[0]).Count;
         }
 
         public void DefineSearchFilter(object entity, string filter)
@@ -316,7 +368,7 @@ namespace System.Data.RopSql
                                              entityType,
                                              (int)PersistenceAction.Create,
                                              null, null, false, emptyArray,
-                                             null, isReplicating,
+                                             null, null, isReplicating,
                                              out commandParameters);
 
                 lastInsertedId = base.executeCommand(sqlInstruction, commandParameters);
@@ -379,7 +431,7 @@ namespace System.Data.RopSql
             {
                 sqlInstruction = parseEntity(Convert.ChangeType(entity, entityType),
                                                      entityType, (int)PersistenceAction.Edit, filterEntity,
-                                                     null, false, emptyArray, null, false, out commandParameters);
+                                                     null, false, emptyArray, null, null, false, out commandParameters);
 
                 recordsAffected = executeCommand(sqlInstruction, commandParameters);
             }
@@ -441,8 +493,8 @@ namespace System.Data.RopSql
                 sqlInstruction = parseEntity(filterRef, entityType,
                                              (int)PersistenceAction.Delete,
                                              Convert.ChangeType(filterEntity, entityType),
-                                             null, false, emptyArray,
-                                             null, false, out commandParameters);
+                                             null, false, emptyArray, null, null, 
+                                             false, out commandParameters);
 
                 if (composition.Any())
                     foreach (var item in composition)
@@ -476,7 +528,7 @@ namespace System.Data.RopSql
             return recordAffected;
         }
 
-        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, Dictionary<string, double[]> rangeValues, bool forcePrimaryKey, out Dictionary<object, object> commandParameters)
+        private string parseEntity(object entity, Type entityType, int action, object filterEntity, List<int> primaryKeyFilters, bool getExclusion, string[] showAttributes, Dictionary<string, double[]> rangeValues, string groupAttributes, bool forcePrimaryKey, out Dictionary<object, object> commandParameters)
         {
             string sqlInstruction = string.Empty;
             Dictionary<object, object> sqlFilterData;
@@ -492,8 +544,8 @@ namespace System.Data.RopSql
                 sqlFilterData = null;
 
             var keyColumn = EntityReflector.GetKeyColumn(entity, false).GetCustomAttributes(true)
-                                                                 .FirstOrDefault(cln => cln is DataAnnotations.DataColumn
-                                                                                     && ((IDataColumn)cln).IsPrimaryKey()) as DataAnnotations.DataColumn;
+                                           .FirstOrDefault(cln => cln is DataAnnotations.DataColumn
+                                                               && ((IDataColumn)cln).IsPrimaryKey()) as DataAnnotations.DataColumn;
             string keyColumnName = string.Empty;
             if (keyColumn != null)
                 keyColumnName = keyColumn.ColumnName;
@@ -505,9 +557,10 @@ namespace System.Data.RopSql
             var hashColumnName = getEntityHashColumnName(entityProps);
 
             Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData,
-                                                                        showAttributes, keyColumnName, hashCode,
+                                                                        showAttributes, keyColumnName, hashCode, 
                                                                         childHashColumnName ?? hashColumnName,
-                                                                        rangeValues, (primaryKeyFilters != null), getExclusion);
+                                                                        rangeValues, groupAttributes, 
+                                                                        (primaryKeyFilters != null), getExclusion);
 
             switch (action)
             {
@@ -548,6 +601,8 @@ namespace System.Data.RopSql
                     break;
             }
 
+            GC.Collect(2);
+
             return sqlInstruction;
         }
 
@@ -562,14 +617,14 @@ namespace System.Data.RopSql
 
             foreach (var rel in attributeColumnRelation)
                 if (Array.IndexOf(groupingAttributes, rel.Key) > -1)
-                    columnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
+                    columnList += string.Format("{0}, ", ((KeyValuePair<object, object>)rel.Value).Key);
                 else
-                    if ((!rel.Key.Equals("Class")) && (!rel.Key.Equals("DataTable")))
-                        complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<string, object>)rel.Value).Key);
+                    if ((!rel.Key.Equals("Class")) && (!rel.Key.Equals("dataTable")))
+                        complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<object, object>)rel.Value).Key);
 
-            if (!String.IsNullOrEmpty(columnList) && Convert.ToInt32(columnList) > 2)
+            if (!String.IsNullOrEmpty(columnList) && (columnList.Length > 2))
                 columnList = columnList.Substring(0, columnList.Length - 2);
-            if (!String.IsNullOrEmpty(complementaryColumnList) && Convert.ToInt32(complementaryColumnList) > 2)
+            if (!String.IsNullOrEmpty(complementaryColumnList) && (complementaryColumnList.Length > 2))
                 complementaryColumnList = complementaryColumnList.Substring(0, complementaryColumnList.Length - 2);
 
             sqlInstruction = string.Format(sqlInstruction,
@@ -638,7 +693,7 @@ namespace System.Data.RopSql
 
                         setEntityHashKey(entityParent, child);
 
-                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, null, false, out commandParameters));
+                        result.Add(parseEntity(childEntityInstance, childEntityInstance.GetType(), action, childEntityFilter, null, false, null, null, null, false, out commandParameters));
                     }
                     else
                     {
@@ -664,7 +719,7 @@ namespace System.Data.RopSql
                                     setEntityForeignKey(entityParent, listItem);
                                     setEntityHashKey(entityParent, listItem);
 
-                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, null, false, out commandParameters));
+                                    result.Add(parseEntity(listItem, listItem.GetType(), action, childEntityFilter, null, false, null, null, null, false, out commandParameters));
                                 }
                                 else
                                 {
@@ -687,7 +742,7 @@ namespace System.Data.RopSql
                                         childFiltersList.Add(existFilter);
                                     }
 
-                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, null, false, out commandParameters));
+                                    result.Add(parseEntity(manyToEntity, manyToEntity.GetType(), action, existFilter, null, false, null, null, null, false, out commandParameters));
                                 }
                             }
                         }
@@ -741,7 +796,8 @@ namespace System.Data.RopSql
 
             string result = string.Empty;
             if (compositionFilter != null)
-                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, compositionFilter, existentKeys, true, null, null, false, out commandParameters);
+                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, 
+                                     compositionFilter, existentKeys, true, null, null, null, false, out commandParameters);
 
             return result;
         }
@@ -867,6 +923,7 @@ namespace System.Data.RopSql
 
                     var dataColumnAttrib = propAttribs.FirstOrDefault(ca => ca.GetType().Name.Equals("DataColumn")) as DataAnnotations.DataColumn;
                     var relColumnAttrib = propAttribs.FirstOrDefault(ca => ca.GetType().Name.Equals("RelationalColumn")) as DataAnnotations.RelationalColumn;
+                    var aggregColumnAttrib = propAttribs.FirstOrDefault(ca => ca.GetType().Name.Equals("DataAggregationColumn")) as DataAnnotations.DataAggregationColumn;
 
                     foreach (XmlNode childElem in elem.ChildNodes)
                     {
@@ -874,9 +931,12 @@ namespace System.Data.RopSql
 
                         setValue = setValue || ((relColumnAttrib != null)
                                                && ((relColumnAttrib.ColumnName.Equals(childElem.Name)
-                                                  && (relColumnAttrib.ColumnAlias == null))
-                                                     || ((relColumnAttrib.ColumnAlias != null)
+                                                  && (string.IsNullOrEmpty(relColumnAttrib.ColumnAlias)))
+                                                     || ((!string.IsNullOrEmpty(relColumnAttrib.ColumnAlias))
                                                         && relColumnAttrib.ColumnAlias.Equals(childElem.Name))));
+
+                        setValue = setValue || ((aggregColumnAttrib != null)
+                                                && (aggregColumnAttrib.ColumnAlias.Equals(childElem.Name)));
 
                         if (setValue)
                             prop.SetValue(returnEntity, formatSQLOutputValue(childElem.InnerText, prop.PropertyType), null);
@@ -955,7 +1015,7 @@ namespace System.Data.RopSql
 
                 foreach (DataAggregationColumn annotation in attributeAnnotations.Where(ca => ca is DataAggregationColumn))
                 {
-                    if (action == (int)PersistenceAction.Aggregation)
+                    if ((action == (int)PersistenceAction.ViewMax) || (action == (int)PersistenceAction.Count))
                     {
                         object sqlValueColumn = new KeyValuePair<object, object>(annotation, null);
                         objectSQLDataRelation.Add(attrib.Name, sqlValueColumn);
@@ -966,7 +1026,7 @@ namespace System.Data.RopSql
             return objectSQLDataRelation;
         }
 
-        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, string hashColumnName, Dictionary<string, double[]> rangeValues, bool multipleFilters, bool getExclusion)
+        private Dictionary<string, string> getSqlParameters(Dictionary<object, object> entitySqlData, int action, Dictionary<object, object> entitySqlFilter, string[] showAttributes, string keyColumnName, long entityHash, string hashColumnName, Dictionary<string, double[]> rangeValues, string groupAttributes, bool multipleFilters, bool getExclusion)
         {
             var returnDictionary = new Dictionary<string, string>();
             var relationshipDictionary = new Dictionary<string, string>();
@@ -980,10 +1040,22 @@ namespace System.Data.RopSql
             string relation = string.Empty;
             bool rangeFilter = false;
 
+            string entityAttributeName = string.Empty;
+            string entityColumnName = string.Empty;
+
             if (entitySqlData != null)
                 foreach (var item in entitySqlData.Where(item => !item.Key.Equals("Class")))
                 {
                     relation = string.Empty;
+
+                    if (!item.Key.Equals("dataTable"))
+                    {
+                        entityAttributeName = item.Key.ToString();
+                        entityColumnName = ((KeyValuePair<object, object>)item.Value).Key.ToString();
+                        
+                        if (groupAttributes.Contains(entityAttributeName))
+                            columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
+                    }
 
                     if (item.Key.Equals("dataTable"))
                     {
@@ -1046,10 +1118,12 @@ namespace System.Data.RopSql
                     {
                         var annotation = ((KeyValuePair<object, object>)item.Value).Key as DataAggregationColumn;
                         
-                        if (annotation.AggregationType == DataAggregationType.Maximum)
-                            columnList += string.Format("MAX({0}.{1}) AS {2}, ", tableName, annotation.ColumnName, annotation.ColumnAlias);
-                        else if (annotation.AggregationType == DataAggregationType.Count)
-                            columnList += string.Format("COUNT({0}.{1}) AS {2}, ", tableName, annotation.ColumnName, annotation.ColumnAlias);
+                        if ((action == (int)PersistenceAction.ViewMax) && (annotation.AggregationType == DataAggregationType.Maximum))
+                            columnList += string.Format(SQLANSIRepository.DataPersistence_Action_MaximumAggregation, 
+                                                        tableName, annotation.ColumnName, annotation.ColumnAlias);
+                        else if ((action == (int)PersistenceAction.Count) && (annotation.AggregationType == DataAggregationType.Count))
+                            columnList += string.Format(SQLANSIRepository.DataPersistence_Action_CountAggregation,
+                                                        tableName, annotation.ColumnName, annotation.ColumnAlias);
                     }
                     else if (item.Key.Equals("RelatedEntity"))
                     {
@@ -1057,8 +1131,6 @@ namespace System.Data.RopSql
                     }
                     else
                     {
-                        string entityAttributeName = item.Key.ToString();
-                        object entityColumnName = ((KeyValuePair<object, object>)item.Value).Key;
                         object entityColumnValue = ((KeyValuePair<object, object>)item.Value).Value;
 
                         switch (action)
@@ -1212,7 +1284,8 @@ namespace System.Data.RopSql
             {
                 if ((action == (int)PersistenceAction.List)
                     || (action == (int)PersistenceAction.View)
-                    || (action == (int)PersistenceAction.Aggregation))
+                    || (action == (int)PersistenceAction.ViewMax)
+                    || (action == (int)PersistenceAction.Count))
                 {
                     columnList = columnList.Substring(0, columnList.Length - 2);
                     returnDictionary.Add("columnList", columnList);
@@ -1771,7 +1844,8 @@ namespace System.Data.RopSql
         Delete = 3,
         List = 4,
         View = 5,
-        Aggregation = 6
+        ViewMax = 6,
+        Count = 7
 
         #endregion
     }

@@ -70,6 +70,15 @@ namespace System.Data.RopSql.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to COUNT({0}.{1}) AS {2}, .
+        /// </summary>
+        public static string DataPersistence_Action_CountAggregation {
+            get {
+                return ResourceManager.GetString("DataPersistence_Action_CountAggregation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to INSERT INTO {0} ({1}) VALUES ({2}) .
         /// </summary>
         public static string DataPersistence_Action_Create {
@@ -151,6 +160,24 @@ namespace System.Data.RopSql.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to MAX({0}.{1}) AS {2}, .
+        /// </summary>
+        public static string DataPersistence_Action_MaximumAggregation {
+            get {
+                return ResourceManager.GetString("DataPersistence_Action_MaximumAggregation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to MIN({0}.{1}) AS {2}, .
+        /// </summary>
+        public static string DataPersistence_Action_MinimumAggregation {
+            get {
+                return ResourceManager.GetString("DataPersistence_Action_MinimumAggregation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to IN ({0}).
         /// </summary>
         public static string DataPersistence_Action_MultipleFilter {
@@ -201,6 +228,15 @@ namespace System.Data.RopSql.Resources {
         public static string DataPersistence_Action_RelationateOptionally {
             get {
                 return ResourceManager.GetString("DataPersistence_Action_RelationateOptionally", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SUM({0}.{1}) AS {2}, .
+        /// </summary>
+        public static string DataPersistence_Action_SummaryAggregation {
+            get {
+                return ResourceManager.GetString("DataPersistence_Action_SummaryAggregation", resourceCulture);
             }
         }
         
