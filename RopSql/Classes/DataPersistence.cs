@@ -397,7 +397,7 @@ namespace System.Data.RopSql
 
                     if (persistComposition)
                     {
-                        var compositionParallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
+                        var compositionParallelDelegate = new ParameterizedThreadStart(persistCompositionAsync);
 
                         Parallelizer.StartNewProcess(compositionParallelDelegate, parallelParam);
                         //parseCompositionAsync(parallelParam); // Debug purposes
@@ -456,7 +456,7 @@ namespace System.Data.RopSql
 
                 if (persistComposition)
                 {
-                    var parallelDelegate = new ParameterizedThreadStart(parseCompositionAsync);
+                    var parallelDelegate = new ParameterizedThreadStart(persistCompositionAsync);
 
                     Parallelizer.StartNewProcess(parallelDelegate, parallelParam);
                     //parseCompositionAsync(parallelParam); // Debug purposes
@@ -1658,18 +1658,8 @@ namespace System.Data.RopSql
             return result;
         }
 
-        private void parseCompositionAsync(object param)
+        private void persistComposition(object entity, Type entityType, int action, Dictionary<object, object> commandParameters, object filterEntity)
         {
-            Thread.Sleep(700);
-
-            ParallelParam parallelParam = param as ParallelParam;
-
-            object entity = parallelParam.Param1;
-            Type entityType = parallelParam.Param2 as Type;
-            int action = int.Parse(parallelParam.Param3.ToString());
-            Dictionary<object, object> commandParameters = parallelParam.Param4 as Dictionary<object, object>;
-            object filterEntity = parallelParam.Param5;
-
             try
             {
                 List<string> childEntityCommands = parseComposition(entity, entityType, action, filterEntity);
@@ -1691,7 +1681,7 @@ namespace System.Data.RopSql
                 if (tableAttrib.IsCacheable)
                     DataCache.Del(entity, true);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 if (base.transactionControl != null)
                     base.CancelTransaction();
@@ -1699,7 +1689,25 @@ namespace System.Data.RopSql
                 if (base.connection.State == ConnectionState.Open)
                     Delete(filterEntity, filterEntity.GetType());
 
-                registerAsyncException("ParseComposition", ex, param);
+                registerAsyncException("ParseComposition", ex, entity);
+            }
+        }
+
+        private void persistCompositionAsync(object param)
+        {
+            Thread.Sleep(base.asyncDelay);
+
+            ParallelParam parallelParam = param as ParallelParam;
+
+            object entity = parallelParam.Param1;
+            Type entityType = parallelParam.Param2 as Type;
+            int action = int.Parse(parallelParam.Param3.ToString());
+            Dictionary<object, object> commandParameters = parallelParam.Param4 as Dictionary<object, object>;
+            object filterEntity = parallelParam.Param5;
+
+            using (var persistence = new DataPersistence())
+            {
+                persistence.persistComposition(entity, entityType, action, commandParameters, filterEntity);
             }
         }
 
@@ -1715,7 +1723,10 @@ namespace System.Data.RopSql
                     Type entityType = parallelParam.Param2 as Type;
                     bool persistComposition = (bool)parallelParam.Param5;
 
-                    createEntity(entity, entityType, persistComposition, true, replicaConnConfig);
+                    using (var persistence = new DataPersistence())
+                    {
+                        persistence.createEntity(entity, entityType, persistComposition, true, replicaConnConfig);
+                    }
                 }
             }
             catch (Exception ex)
@@ -1737,7 +1748,10 @@ namespace System.Data.RopSql
                     object filterEntity = parallelParam.Param5;
                     bool persistComposition = (bool)parallelParam.Param6;
 
-                    editEntity(entity, filterEntity, entityType, persistComposition, true, replicaConnConfig);
+                    using (var persistence = new DataPersistence())
+                    {
+                        persistence.editEntity(entity, filterEntity, entityType, persistComposition, true, replicaConnConfig);
+                    }
                 }
             }
             catch (Exception ex)

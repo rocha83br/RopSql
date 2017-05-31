@@ -21,6 +21,7 @@ namespace System.Data.RopSql
         protected string[] replicaConnectionsConfig;
         protected string cultureAcronym;
         protected string logPath;
+        protected int asyncDelay;
 
         #endregion
 
@@ -40,19 +41,28 @@ namespace System.Data.RopSql
 
         protected DataBase()
         {
-            using (var crypto = new Encrypter())
+            try
             {
-                connectionConfig = crypto.DecryptText(ConfigurationManager.ConnectionStrings["RopSqlConnStr"].ConnectionString);
+                using (var crypto = new Encrypter())
+                {
+                    connectionConfig = crypto.DecryptText(ConfigurationManager.ConnectionStrings["RopSqlConnStr"].ConnectionString);
 
-                if (ConfigurationManager.ConnectionStrings["RopSqlReplicaConnStr"] != null)
-                    replicaConn = crypto.DecryptText(ConfigurationManager.ConnectionStrings["RopSqlReplicaConnStr"].ConnectionString);
+                    if (ConfigurationManager.ConnectionStrings["RopSqlReplicaConnStr"] != null)
+                        replicaConn = crypto.DecryptText(ConfigurationManager.ConnectionStrings["RopSqlReplicaConnStr"].ConnectionString);
+                }
+
+                if (!string.IsNullOrWhiteSpace(replicaConn))
+                    replicaConnectionsConfig = replicaConn.Split('|');
+
+                asyncDelay = int.Parse(ConfigurationManager.AppSettings["RopSqlAsyncDelay"]);
+
+                cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
+                logPath = ConfigurationManager.AppSettings["RopSqlLogPath"];
             }
-
-            if (!string.IsNullOrWhiteSpace(replicaConn))
-                replicaConnectionsConfig = replicaConn.Split('|');
-
-            cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
-            logPath = ConfigurationManager.AppSettings["RopSqlLogPath"];
+            catch (Exception)
+            {
+                throw new ConfigurationErrorsException("CheckConfigTags: RopSqlConnStr, RopSqlAsyncDelay or RopSqlCulture");
+            }
         }
 
         #endregion
