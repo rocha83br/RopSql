@@ -1053,7 +1053,7 @@ namespace System.Data.RopSql
                         entityAttributeName = item.Key.ToString();
                         entityColumnName = ((KeyValuePair<object, object>)item.Value).Key.ToString();
                         
-                        if (groupAttributes.Contains(entityAttributeName))
+                        if (!string.IsNullOrWhiteSpace(groupAttributes) && groupAttributes.Contains(entityAttributeName))
                             columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
                     }
 
