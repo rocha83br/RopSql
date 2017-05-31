@@ -34,7 +34,7 @@ namespace System.Globalization.Language
         protected virtual void Dispose(bool managed)
         {
             if (!managed)
-                GC.SuppressFinalize(this);
+                GC.ReRegisterForFinalize(this);
             else
                 GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
         }

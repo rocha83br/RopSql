@@ -170,10 +170,10 @@ namespace System.Data.RopSql
 
             protected virtual void Dispose(bool managed)
             {
-                persistence = null;
+                persistence.Dispose();
 
                 if (!managed)
-                    GC.SuppressFinalize(this);
+                    GC.ReRegisterForFinalize(this);
                 else
                     GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
             }

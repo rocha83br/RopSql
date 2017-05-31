@@ -62,7 +62,9 @@ namespace System.Data.RopSql
         protected virtual void Dispose(bool managed)
         {
             connection.Dispose();
-            transactionControl.Dispose();
+
+            if (transactionControl != null)
+                transactionControl.Dispose();
 
             if (!managed)
                 GC.ReRegisterForFinalize(this);

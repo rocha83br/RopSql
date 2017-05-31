@@ -22,5 +22,6 @@ namespace System.Data.RopSql.Interfaces
         void StartTransaction();
         void CommitTransaction();
         void CancelTransaction();
+        void Dispose();
     }
 }
