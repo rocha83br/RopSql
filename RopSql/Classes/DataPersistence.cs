@@ -1771,7 +1771,10 @@ namespace System.Data.RopSql
                     object filterEntity = parallelParam.Param1;
                     Type entityType = parallelParam.Param2 as Type;
 
-                    deleteEntity(filterEntity, entityType, true, replicaConnConfig);
+                    using (var persistence = new DataPersistence())
+                    {
+                        deleteEntity(filterEntity, entityType, true, replicaConnConfig);
+                    }
                 }
             }
             catch (Exception ex)
