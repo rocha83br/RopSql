@@ -1689,7 +1689,7 @@ namespace System.Data.RopSql
                 if (base.connection.State == ConnectionState.Open)
                     Delete(filterEntity, filterEntity.GetType());
 
-                registerAsyncException("ParseComposition", ex, entity);
+                registerAsyncException("PersistComposition", ex, entity);
             }
         }
 
@@ -1773,7 +1773,7 @@ namespace System.Data.RopSql
 
                     using (var persistence = new DataPersistence())
                     {
-                        deleteEntity(filterEntity, entityType, true, replicaConnConfig);
+                        persistence.deleteEntity(filterEntity, entityType, true, replicaConnConfig);
                     }
                 }
             }
