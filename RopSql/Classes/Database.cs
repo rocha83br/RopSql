@@ -31,7 +31,8 @@ namespace System.Data.RopSql
         {
             get 
             {
-                return (replicaConnectionsConfig.Length > 0);
+                return ((replicaConnectionsConfig != null) 
+                    && (replicaConnectionsConfig.Length > 0));
             }
         }
 
