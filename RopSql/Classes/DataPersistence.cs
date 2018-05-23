@@ -1100,8 +1100,8 @@ namespace System.Data.RopSql
                             {
                                 relation = string.Format(SQLANSIRepository.DataPersistence_Action_RelationateOptionally,
                                                          relationConfig.TableName.ToLower(),
-                                                         string.Concat(tableName, ".", relationConfig.ForeignKeyColumn),
-                                                         string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.KeyColumn));
+                                                         string.Concat(tableName, ".", relationConfig.KeyColumn),
+                                                         string.Concat(relationConfig.TableName.ToLower(), ".", relationConfig.ForeignKeyColumn));
                             }
 
                             if (!string.IsNullOrEmpty(hashColumnName))
