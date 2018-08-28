@@ -1359,7 +1359,6 @@ namespace System.Data.RopSql
         public void fillComposition(object loadedEntity, Type entityType)
         {
             RelatedEntity relationConfig = null;
-            object attributeInstance = null;
 
             var attributeList = entityType.GetProperties()
                                           .Where(prp => prp.GetCustomAttributes(true)
@@ -1367,6 +1366,8 @@ namespace System.Data.RopSql
 
             foreach (var attribute in attributeList)
             {
+                object attributeInstance = null;
+
                 IEnumerable<object> attributeAnnotations = attribute.GetCustomAttributes(true)
                                                                     .Where(atb => atb.GetType().Name.Equals("RelatedEntity"));
 
@@ -1445,7 +1446,7 @@ namespace System.Data.RopSql
                     }
                 }
 
-                if ((attributeInstance != null) && (attributeInstance.GetType().Name.Equals(attribute.PropertyType.Name)))
+                if (attributeInstance != null)
                     if (!attribute.PropertyType.Name.Contains("List"))
                         attribute.SetValue(loadedEntity, attributeInstance, null);
                     else
