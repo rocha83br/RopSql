@@ -8,6 +8,7 @@ using System.Data.RopSql.Exceptions;
 using System.Security.InMemProfile;
 using System.Xml;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace System.Data.RopSql
 {
@@ -60,9 +61,12 @@ namespace System.Data.RopSql
                 cultureAcronym = ConfigurationManager.AppSettings["RopSqlCulture"];
                 logPath = ConfigurationManager.AppSettings["RopSqlLogPath"];
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw new ConfigurationErrorsException("CheckConfigTags: RopSqlConnStr, RopSqlReplicaConnStr, RopSqlAsyncDelay or RopSqlCulture");
+                var msg = "CheckConfigTags: RopSqlConnStr, RopSqlAsyncDelay or RopSqlCulture";
+                msg += string.Concat(Environment.NewLine, JsonConvert.SerializeObject(ex));
+                
+                throw new ConfigurationErrorsException(msg);
             }
         }
 
