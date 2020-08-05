@@ -62,7 +62,7 @@ namespace System.Data.RopSql
             }
             catch (Exception)
             {
-                throw new ConfigurationErrorsException("CheckConfigTags: RopSqlConnStr, RopSqlAsyncDelay or RopSqlCulture");
+                throw new ConfigurationErrorsException("CheckConfigTags: RopSqlConnStr, RopSqlReplicaConnStr, RopSqlAsyncDelay or RopSqlCulture");
             }
         }
 
