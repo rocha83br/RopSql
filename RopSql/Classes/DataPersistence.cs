@@ -17,7 +17,7 @@ using System.Data.RopSql.Exceptions;
 
 namespace System.Data.RopSql
 {
-    public class DataPersistence : DataBaseODBCConnection, IPersistence
+    public class DataPersistence : DataBaseMySqlConnection, IPersistence
     {
         #region Declarations
 

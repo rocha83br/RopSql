@@ -7,23 +7,24 @@ using System.Data.RopSql.Resources;
 using System.Data.RopSql.Exceptions;
 using System.Xml;
 using System.Text;
+using MySqlConnector;
 
 namespace System.Data.RopSql
 {
-    public class DataBaseOleDbConnection : DataBase, IDisposable
+    public class DataBaseMySqlConnection : DataBase, IDisposable
     {
         #region Declarations
 
-        protected readonly SqlConnection connection;
-        protected SqlTransaction transactionControl;
+        protected readonly MySqlConnection connection;
+        protected MySqlTransaction transactionControl;
 
         #endregion
 
         #region Constructors
 
-        protected DataBaseOleDbConnection() : base()
+        protected DataBaseMySqlConnection() : base()
         {
-            connection = new SqlConnection();
+            connection = new MySqlConnection();
 
             transactionControl = null;
         }
@@ -106,7 +107,7 @@ namespace System.Data.RopSql
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
         protected int executeCommand(string sqlInstruction, Dictionary<object, object> parameters)
         {
-            SqlCommand sqlCommand;
+            MySqlCommand sqlCommand;
             string insertCommand = SQLANSIRepository.DataPersistence_ReservedWord_INSERT;
 
             int executionReturn = 0;
@@ -150,8 +151,8 @@ namespace System.Data.RopSql
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
         protected XmlDocument executeProcedure(string procedureName, Dictionary<object, object> parameters)
         {
-            SqlCommand sqlCommand = null;
-            SqlDataAdapter sqlAdapter = null;
+            MySqlCommand sqlCommand = null;
+            MySqlDataAdapter sqlAdapter = null;
 
             DataSet dataTables = new DataSet();
             StringBuilder xmlText = new StringBuilder();
@@ -176,7 +177,7 @@ namespace System.Data.RopSql
                         && (transactionControl.Connection != null))
                     sqlCommand.Transaction = transactionControl;
 
-                sqlAdapter = new SqlDataAdapter(sqlCommand);
+                sqlAdapter = new MySqlDataAdapter(sqlCommand);
 
                 sqlAdapter.Fill(dataTables);
 
@@ -194,8 +195,8 @@ namespace System.Data.RopSql
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities")]
         protected XmlDocument executeQuery(string sqlInstruction)
         {
-            SqlCommand sqlCommand = null;
-            SqlDataAdapter sqlAdapter = null;
+            MySqlCommand sqlCommand = null;
+            MySqlDataAdapter sqlAdapter = null;
 
             DataSet dataTables = new DataSet();
             StringBuilder xmlText = new StringBuilder();
@@ -212,7 +213,7 @@ namespace System.Data.RopSql
                         && (transactionControl.Connection != null))
                     sqlCommand.Transaction = transactionControl;
 
-                sqlAdapter = new SqlDataAdapter(sqlCommand);
+                sqlAdapter = new MySqlDataAdapter(sqlCommand);
 
                 sqlAdapter.Fill(dataTables);
 
