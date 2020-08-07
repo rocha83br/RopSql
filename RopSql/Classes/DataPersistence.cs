@@ -493,7 +493,7 @@ namespace System.Data.RopSql
                 sqlInstruction = parseEntity(filterRef, entityType,
                                              (int)PersistenceAction.Delete,
                                              Convert.ChangeType(filterEntity, entityType),
-                                             null, false, emptyArray, null, null, 
+                                             null, false, emptyArray, null, null,
                                              false, out commandParameters);
 
                 if (composition.Any())
@@ -557,9 +557,9 @@ namespace System.Data.RopSql
             var hashColumnName = getEntityHashColumnName(entityProps);
 
             Dictionary<string, string> sqlParameters = getSqlParameters(sqlEntityData, action, sqlFilterData,
-                                                                        showAttributes, keyColumnName, hashCode, 
+                                                                        showAttributes, keyColumnName, hashCode,
                                                                         childHashColumnName ?? hashColumnName,
-                                                                        rangeValues, groupAttributes, 
+                                                                        rangeValues, groupAttributes,
                                                                         (primaryKeyFilters != null), getExclusion);
 
             switch (action)
@@ -620,7 +620,7 @@ namespace System.Data.RopSql
                     columnList += string.Format("{0}, ", ((KeyValuePair<object, object>)rel.Value).Key);
                 else
                     if ((!rel.Key.Equals("Class")) && (!rel.Key.Equals("dataTable")))
-                        complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<object, object>)rel.Value).Key);
+                    complementaryColumnList += string.Format("{0}, ", ((KeyValuePair<object, object>)rel.Value).Key);
 
             if (!String.IsNullOrEmpty(columnList) && (columnList.Length > 2))
                 columnList = columnList.Substring(0, columnList.Length - 2);
@@ -796,7 +796,7 @@ namespace System.Data.RopSql
 
             string result = string.Empty;
             if (compositionFilter != null)
-                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete, 
+                result = parseEntity(compositionFilter, compositionFilter.GetType(), (int)PersistenceAction.Delete,
                                      compositionFilter, existentKeys, true, null, null, null, false, out commandParameters);
 
             return result;
@@ -1052,7 +1052,7 @@ namespace System.Data.RopSql
                     {
                         entityAttributeName = item.Key.ToString();
                         entityColumnName = ((KeyValuePair<object, object>)item.Value).Key.ToString();
-                        
+
                         if (!string.IsNullOrWhiteSpace(groupAttributes) && groupAttributes.Contains(entityAttributeName))
                             columnList += string.Format("{0}.{1}, ", tableName, entityColumnName);
                     }
@@ -1117,9 +1117,9 @@ namespace System.Data.RopSql
                     else if (((KeyValuePair<object, object>)item.Value).Key is DataAggregationColumn)
                     {
                         var annotation = ((KeyValuePair<object, object>)item.Value).Key as DataAggregationColumn;
-                        
+
                         if ((action == (int)PersistenceAction.ViewMax) && (annotation.AggregationType == DataAggregationType.Maximum))
-                            columnList += string.Format(SQLANSIRepository.DataPersistence_Action_MaximumAggregation, 
+                            columnList += string.Format(SQLANSIRepository.DataPersistence_Action_MaximumAggregation,
                                                         tableName, annotation.ColumnName, annotation.ColumnAlias);
                         else if ((action == (int)PersistenceAction.Count) && (annotation.AggregationType == DataAggregationType.Count))
                             columnList += string.Format(SQLANSIRepository.DataPersistence_Action_CountAggregation,
@@ -1293,11 +1293,11 @@ namespace System.Data.RopSql
                 }
                 else
                     if (!string.IsNullOrEmpty(columnValueList))
-                    {
-                        columnValueList = columnValueList.Substring(0, columnValueList.Length - 2);
+                {
+                    columnValueList = columnValueList.Substring(0, columnValueList.Length - 2);
 
-                        returnDictionary.Add("columnValueList", columnValueList);
-                    }
+                    returnDictionary.Add("columnValueList", columnValueList);
+                }
 
                 if (!string.IsNullOrEmpty(columnFilterList))
                 {
@@ -1522,6 +1522,9 @@ namespace System.Data.RopSql
                     if (columnDataType.FullName.Equals("System.Double")
                         || columnDataType.FullName.Equals("System.Decimal"))
                         columnValue = columnValue.Replace(".", ",");
+
+                    if (columnDataType.FullName.Equals("System.Boolean"))
+                        columnValue = columnValue.Equals("0") ? "true" : "false";
 
                     result = Convert.ChangeType(columnValue, columnDataType);
                 }
