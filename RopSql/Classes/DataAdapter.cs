@@ -20,10 +20,10 @@ namespace System.Data.RopSql
 
         #region Construtors
 
-            public RopSqlDataAdapter()
+            public RopSqlDataAdapter(bool keepDBConnection = false)
             {
                 if (InstanceCache.Persistence == null)
-                    InstanceCache.Persistence = new DataPersistence();
+                    InstanceCache.Persistence = new DataPersistence(keepDBConnection);
                 
                 persistence = (IPersistence)InstanceCache.Persistence;
             }
@@ -140,13 +140,7 @@ namespace System.Data.RopSql
             public void StartTransaction()
             {
                 if (InstanceCache.Persistence == null)
-                {
-                    //persistence = (IPersistence)Activator.CreateInstanceFrom(dataLayerPath,
-                    //                                                         "System.Data.RopSql.DataPersistence", new object[] { true }).Unwrap();
-                    
-                    InstanceCache.Persistence = new DataPersistence();
-                    
-                }
+                    InstanceCache.Persistence = new DataPersistence(true);
                 
                 persistence = (IPersistence)InstanceCache.Persistence;
 

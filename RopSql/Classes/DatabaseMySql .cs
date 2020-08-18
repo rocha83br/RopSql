@@ -15,7 +15,7 @@ namespace System.Data.RopSql
     {
         #region Declarations
 
-        protected readonly MySqlConnection connection;
+        protected MySqlConnection connection;
         protected MySqlTransaction transactionControl;
 
         #endregion
@@ -24,9 +24,7 @@ namespace System.Data.RopSql
 
         protected DataBaseMySqlConnection() : base()
         {
-            connection = new MySqlConnection();
 
-            transactionControl = null;
         }
 
         #endregion
@@ -35,40 +33,34 @@ namespace System.Data.RopSql
 
         public void StartTransaction()
         {
-            if (connection.State == System.Data.ConnectionState.Open)
-                this.transactionControl = connection.BeginTransaction();
+            if (connection.State != System.Data.ConnectionState.Open)
+                connect();
+
+            this.transactionControl = connection.BeginTransaction();
         }
 
         public void CommitTransaction()
         {
-            if ((connection.State == ConnectionState.Open)
+            if ((connection.State == System.Data.ConnectionState.Open)
                 && (this.transactionControl != null))
                 this.transactionControl.Commit();
         }
 
         public void CancelTransaction()
         {
-            if ((connection.State == ConnectionState.Open)
+            if ((connection.State == System.Data.ConnectionState.Open)
                 && (this.transactionControl != null))
                 this.transactionControl.Rollback();
         }
 
         public void Dispose()
         {
-            Dispose(false);
-        }
-
-        protected virtual void Dispose(bool managed)
-        {
             connection.Dispose();
 
             if (transactionControl != null)
                 transactionControl.Dispose();
 
-            if (!managed)
-                GC.ReRegisterForFinalize(this);
-            else
-                GC.Collect(GC.GetGeneration(this), GCCollectionMode.Default);
+            GC.ReRegisterForFinalize(this);
         }
 
         #endregion
@@ -79,6 +71,8 @@ namespace System.Data.RopSql
         {
             if (!string.IsNullOrEmpty(this.connectionConfig) || !string.IsNullOrEmpty(optionalConnConfig))
             {
+                connection = new MySqlConnection();
+
                 if ((connection.State != ConnectionState.Open) && (connection.State != ConnectionState.Connecting))
                 {
                     if (!string.IsNullOrEmpty(optionalConnConfig))
@@ -208,7 +202,7 @@ namespace System.Data.RopSql
 
                 sqlCommand = connection.CreateCommand();
                 sqlCommand.CommandText = sqlInstruction;
-                
+
                 if ((transactionControl != null)
                         && (transactionControl.Connection != null))
                     sqlCommand.Transaction = transactionControl;
