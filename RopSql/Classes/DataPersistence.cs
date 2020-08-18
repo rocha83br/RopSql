@@ -1524,7 +1524,7 @@ namespace System.Data.RopSql
                         columnValue = columnValue.Replace(".", ",");
 
                     if (columnDataType.FullName.Equals("System.Boolean"))
-                        columnValue = columnValue.Equals("0") ? "true" : "false";
+                        columnValue = columnValue.Equals("1") ? "true" : "false";
 
                     result = Convert.ChangeType(columnValue, columnDataType);
                 }
