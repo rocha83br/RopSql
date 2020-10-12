@@ -22,7 +22,7 @@ namespace System.Data.RopSql
 
             public RopSqlDataAdapter(bool keepDBConnection = false)
             {
-                if (InstanceCache.Persistence == null)
+                if ((InstanceCache.Persistence == null) || keepDBConnection)
                     InstanceCache.Persistence = new DataPersistence(keepDBConnection);
                 
                 persistence = (IPersistence)InstanceCache.Persistence;
